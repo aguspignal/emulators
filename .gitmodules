@@ -1,0 +1,3 @@
+[submodule "apps/gba/modules/mgba-core/android/vendor/mgba"]
+	path = apps/gba/modules/mgba-core/android/vendor/mgba
+	url = https://github.com/mgba-emu/mgba.git
