@@ -3,7 +3,9 @@
     "name": "GBA Emulator",
     "slug": "gba",
     "version": "1.0.0",
-    "platforms": ["android"],
+    "platforms": [
+      "android"
+    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -16,6 +18,12 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "db93b660-e91f-40d0-9cf6-7d8d1fd3200b"
+      }
+    },
+    "owner": "aguspignal"
   }
 }

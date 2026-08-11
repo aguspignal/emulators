@@ -2,5 +2,7 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true
-  }
+  },
+  // vendor/mgba contains Qt Linguist .ts files (XML), which tsc must not parse
+  "exclude": ["node_modules", "modules/mgba-core/android/vendor"]
 }

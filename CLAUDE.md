@@ -42,4 +42,4 @@ Native code changes under `modules/` require a rebuild (`expo run:android`), not
 
 ## Current state / roadmap
 
-Scaffolding is complete and typechecks. The Kotlin modules are stubs: JNI integration of the actual cores (mGBA, melonDS, Azahar), ROM picking/library on the Home screen, the on-screen gamepad overlay, and savestate UI are all still to be built. EAS project IDs are not set yet (`eas init` per app when needed; iOS/store submission config is out of scope).
+Scaffolding is complete and typechecks. `apps/gba` has the real mGBA core integrated over JNI (git submodule at `apps/gba/modules/mgba-core/android/vendor/mgba`, pinned to 0.10.5 — run `git submodule update --init` after cloning). The melonDS and Azahar Kotlin modules are still stubs. ROM picking/library on the Home screen, the on-screen gamepad overlay, and savestate UI are still to be built. iOS/store submission config is out of scope.

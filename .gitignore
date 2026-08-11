@@ -13,6 +13,8 @@ apps/*/android/build/
 apps/*/android/.gradle/
 apps/*/android/local.properties
 apps/*/ios/
+apps/*/modules/*/android/build/
+apps/*/modules/*/android/.cxx/
 
 # Metro
 .metro-health-check*
