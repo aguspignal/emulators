@@ -1,0 +1,36 @@
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# native builds
+apps/*/android/app/build/
+apps/*/android/build/
+apps/*/android/.gradle/
+apps/*/android/local.properties
+apps/*/ios/
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# typescript
+*.tsbuildinfo
+
+# env
+.env*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/

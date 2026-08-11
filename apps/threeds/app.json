@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "3DS Emulator",
+    "slug": "threeds",
+    "version": "1.0.0",
+    "platforms": ["android"],
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "android": {
+      "package": "com.aguspignal.threeds",
+      "adaptiveIcon": {
+        "backgroundColor": "#101014",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    }
+  }
+}

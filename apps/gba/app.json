@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "GBA Emulator",
+    "slug": "gba",
+    "version": "1.0.0",
+    "platforms": ["android"],
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "android": {
+      "package": "com.aguspignal.gba",
+      "adaptiveIcon": {
+        "backgroundColor": "#101014",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    }
+  }
+}
