@@ -2,6 +2,7 @@
   "expo": {
     "name": "GBA Emulator",
     "slug": "gba",
+    "scheme": "gba",
     "version": "1.0.0",
     "platforms": [
       "android"
@@ -24,6 +25,9 @@
         "projectId": "db93b660-e91f-40d0-9cf6-7d8d1fd3200b"
       }
     },
-    "owner": "aguspignal"
+    "owner": "aguspignal",
+    "plugins": [
+      "expo-sqlite"
+    ]
   }
 }

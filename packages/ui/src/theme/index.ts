@@ -4,8 +4,15 @@ export const colors = {
   text: '#f2f2f5',
   textMuted: '#9a9aa5',
   primary: '#e60012',
+  danger: '#ff5a52',
   border: '#2e2e38',
 };
+
+export const radius = {
+  sm: 6,
+  md: 10,
+  lg: 16,
+} as const;
 
 export const spacing = {
   xs: 4,

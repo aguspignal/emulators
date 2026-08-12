@@ -8,11 +8,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@emulators/core-interface": "*"
+    "@emulators/core-interface": "*",
+    "@emulators/storage": "*"
   },
   "peerDependencies": {
     "@react-navigation/native": ">=7",
     "@react-navigation/native-stack": ">=7",
+    "expo-sqlite": "*",
     "react": "*",
     "react-native": "*",
     "react-native-safe-area-context": "*",
