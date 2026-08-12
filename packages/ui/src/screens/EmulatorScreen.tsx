@@ -1,20 +1,27 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
-import type { EmulatorSubscription } from '@emulators/core-interface';
+import { useKeepAwake } from 'expo-keep-awake';
+import { CONSOLES, type EmulatorSubscription, type RomInfo } from '@emulators/core-interface';
 import { applyRomInfo } from '@emulators/storage';
 import { useAppConfig } from '../config';
 import { showErrorAlert } from '../utils/errors';
+import { GamepadOverlay } from '../components/gamepad/GamepadOverlay';
+import { GameMenu } from '../components/gamepad/GameMenu';
 import type { RootScreenProps } from '../navigation/types';
 
 /**
- * Hosts the app's native emulator view. Will grow the on-screen gamepad
- * overlay, pause menu, and savestate controls.
+ * Hosts the app's native emulator view, the on-screen gamepad, and the pause
+ * menu. Will grow savestate controls.
  */
 export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'>) {
-  const { core, EmulatorView } = useAppConfig();
+  const { core, EmulatorView, consoles } = useAppConfig();
   const db = useSQLiteContext();
   const { romId, romUri } = route.params;
+  const [booted, setBooted] = useState<RomInfo | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useKeepAwake();
 
   useEffect(() => {
     let cancelled = false;
@@ -34,6 +41,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
           )
         );
         core.start();
+        setBooted(info);
         // Reconcile the import-time guess: the picker can only infer gb vs
         // gbc from the extension, while the core reads the ROM header.
         // Log-only: a failed DB write must never eject a running game.
@@ -57,9 +65,39 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
     };
   }, [core, db, romId, romUri, navigation]);
 
+  const openMenu = useCallback(() => {
+    core.pause();
+    setMenuOpen(true);
+  }, [core]);
+
+  const resume = useCallback(() => {
+    setMenuOpen(false);
+    core.resume();
+  }, [core]);
+
+  const reset = useCallback(() => {
+    core.reset();
+    setMenuOpen(false);
+    core.resume();
+  }, [core]);
+
+  // The pad is laid out for the console the core actually detected from the
+  // ROM header, not the app's headline console: a Game Boy ROM in the GBA app
+  // must not show L/R.
+  const spec = booted ? CONSOLES[booted.console] : consoles[0];
+
   return (
     <View style={styles.container}>
       <EmulatorView style={styles.emulator} />
+      {booted && <GamepadOverlay spec={spec} onMenu={openMenu} suspended={menuOpen} />}
+      {menuOpen && (
+        <GameMenu
+          title={booted?.title ?? ''}
+          onResume={resume}
+          onReset={reset}
+          onExit={() => navigation.goBack()}
+        />
+      )}
     </View>
   );
 }

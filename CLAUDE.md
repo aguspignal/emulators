@@ -2,11 +2,11 @@
 
 Three Android-only Expo React Native apps, each emulating old Nintendo consoles with a different native core, sharing all UI and the TypeScript core contract through workspace packages.
 
-| App | Consoles | Native core | Android package |
-|---|---|---|---|
-| `apps/gba` | Game Boy, GB Color, GB Advance | mGBA (C, via JNI) | `com.aguspignal.gba` |
-| `apps/nds` | Nintendo DS | melonDS (C++, via JNI) | `com.aguspignal.nds` |
-| `apps/threeds` | Nintendo 3DS | Azahar (C++, via JNI) | `com.aguspignal.threeds` |
+| App            | Consoles                       | Native core            | Android package          |
+| -------------- | ------------------------------ | ---------------------- | ------------------------ |
+| `apps/gba`     | Game Boy, GB Color, GB Advance | mGBA (C, via JNI)      | `com.aguspignal.gba`     |
+| `apps/nds`     | Nintendo DS                    | melonDS (C++, via JNI) | `com.aguspignal.nds`     |
+| `apps/threeds` | Nintendo 3DS                   | Azahar (C++, via JNI)  | `com.aguspignal.threeds` |
 
 **Android is the only target platform. Never add iOS or web code, config, or dependencies.**
 
@@ -37,11 +37,8 @@ Each sub-project has its own CLAUDE.md with specifics.
 ## Commands (from root)
 
 - `npm run gba` / `nds` / `threeds` — start Metro for that app
-- `npm run android:gba` / `android:nds` / `android:threeds` — `expo run:android` build + install
 - `npm run typecheck` — typecheck all workspaces
-
-Native code changes under `modules/` require a rebuild (`expo run:android`), not just Fast Refresh.
 
 ## Current state / roadmap
 
-Scaffolding is complete and typechecks. `apps/gba` has the real mGBA core integrated over JNI (git submodule at `apps/gba/modules/mgba-core/android/vendor/mgba`, pinned to 0.10.5 — run `git submodule update --init` after cloning). The ROM library is built: SQLite-backed Home screen with import (picker → MD5 dedup → copy into `roms/`), favorite/delete, and boot-on-tap into the Emulator screen. The melonDS and Azahar Kotlin modules are still stubs. The on-screen gamepad overlay and savestate UI (blocked on exposing `RomInfo.sha1`) are still to be built. iOS/store submission config is out of scope.
+Scaffolding is complete and typechecks. `apps/gba` has the real mGBA core integrated over JNI (git submodule at `apps/gba/modules/mgba-core/android/vendor/mgba`, pinned to 0.10.5 — run `git submodule update --init` after cloning). The ROM library is built: SQLite-backed Home screen with import (picker → MD5 dedup → copy into `roms/`), favorite/delete, and boot-on-tap into the Emulator screen. Games are playable: the shared on-screen gamepad (`packages/ui/src/components/gamepad/`) drives `core.setButton` with real multi-touch and diagonals, plus a pause menu (Resume / Reset / Exit). The melonDS and Azahar Kotlin modules are still stubs. Still to build: physical/Bluetooth controller support (needs key handling in the native views, which currently ignore all key events), haptics, savestate UI (blocked on exposing `RomInfo.sha1`), and pad customization. iOS/store submission config is out of scope.
