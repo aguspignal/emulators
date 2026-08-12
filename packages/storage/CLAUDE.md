@@ -9,12 +9,12 @@ SQLite-backed ROM library (schema, queries, import flow) plus the on-disk ROM fi
 - `src/schema.ts` — `DATABASE_NAME`, `RomRow`, `migrate()` (passed to `SQLiteProvider`'s `onInit`).
 - `src/roms.ts` — queries. Plain functions taking `db` first (no hooks), so they work in effects and event handlers alike.
 - `src/files.ts` — the `roms/` directory, filename sanitizing/uniquing, extension↔console matching, `romFileUri`.
-- `src/import.ts` — `pickAndImportRom`: pick → dedup by MD5 → copy into `Paths.document/roms/`.
+- `src/import.ts` — `pickAndImportRom`: pick → dedup by MD5 → copy into `Paths.document/roms/`. User-attributable failures throw `RomImportError`, whose `message` is user-facing copy — `@emulators/ui`'s `showErrorAlert` shows it verbatim and replaces every other error with generic text.
 
 ## Invariants
 
 - **ROMs are copied once, at import time, into `Paths.document/roms/`.** A picked `content://` URI is a temporary ticket: it expires with the process, the underlying file can move, and C cores need a real path for `fopen()`. Without the import copy the native side re-copies into evictable `cacheDir` on *every* launch. The durable copy makes `loadRom` hit the fast `fromFile` branch.
-- **Imports are de-duplicated by content MD5** (`content_md5 UNIQUE`), hashed *before* copying (`File#md5` streams a `content://` source), so a duplicate costs zero disk. The UNIQUE constraint is the backstop if the check races the insert; the import's `catch` deletes the copied file so a constraint failure can't strand an orphan.
+- **Imports are de-duplicated by content MD5** (`content_md5 UNIQUE`), hashed *before* copying (`File#md5` streams a `content://` source), so a duplicate costs zero disk. The UNIQUE constraint is the backstop if the check races the insert; the import's `catch` deletes the copied file so a constraint failure can't strand an orphan (that cleanup is itself guarded so it can never mask the original error).
 - **The DB stores relative `file_name` only.** Absolute `file://` URIs exist only at runtime via `romFileUri()` — the app-data prefix isn't stable across backup restore / user profiles.
 - **`sanitizeFileName` keeps names ASCII** so `Paths.join` never percent-encodes and Kotlin's `Uri.parse(uri).path` is exact. Do not drop it.
 - **`header_title` holds real ROM-header titles only.** When the header is blank the native side falls back to the filename stem; `applyRomInfo` detects that case (title === stem of `file_name`) and keeps the column `NULL`. Display always uses `display_name`.

@@ -89,7 +89,11 @@ export async function pickAndImportRom(
   } catch (e) {
     // content_md5 UNIQUE is the backstop if the check above raced the
     // insert — don't strand an orphan copy the library can't see.
-    destination.delete();
+    try {
+      destination.delete();
+    } catch {
+      // A failed cleanup must not mask the original error.
+    }
     throw e;
   }
   return { status: 'imported', id };

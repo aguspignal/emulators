@@ -7,9 +7,12 @@ export { HomeScreen } from './screens/HomeScreen';
 export { EmulatorScreen } from './screens/EmulatorScreen';
 export { RomListItem } from './components/RomListItem';
 export { EmptyLibrary } from './components/EmptyLibrary';
+export { ErrorBoundary } from './components/ErrorBoundary';
+export { ErrorState } from './components/ErrorState';
 export { PrimaryButton } from './components/PrimaryButton';
 export { useRoms } from './storage/useRoms';
 export { formatBytes, formatLastPlayed } from './utils/format';
+export { showErrorAlert } from './utils/errors';
 export * as theme from './theme';
 // One import surface for apps: the storage API rides along with the UI.
 export * from '@emulators/storage';
