@@ -13,7 +13,8 @@ Three Android-only Expo React Native apps, each emulating old Nintendo consoles 
 ## Layout
 
 - `packages/core-interface` — `@emulators/core-interface`. Pure TypeScript: the `EmulatorCore` contract every native module implements, plus shared constants (`CONSOLES` screen specs, ROM extensions). Zero React/React Native dependencies — keep it that way.
-- `packages/ui` — `@emulators/ui`. All shared UI: screens, React Navigation navigators, theme, components. React/React Native/navigation are **peerDependencies** only.
+- `packages/storage` — `@emulators/storage`. SQLite ROM library (schema, queries, import flow) + on-disk ROM file management. React-free; `expo-sqlite`/`expo-file-system`/`expo-document-picker` are **peerDependencies**.
+- `packages/ui` — `@emulators/ui`. All shared UI: screens, React Navigation navigators, theme, components. React/React Native/navigation/`expo-sqlite` are **peerDependencies** only.
 - `apps/gba`, `apps/nds`, `apps/threeds` — one Expo project each (own `app.json`, package name, `eas.json`). Each contains its native core as a local Expo Module under `modules/`. Apps hold the real React/React Native/navigation dependencies.
 
 Each sub-project has its own CLAUDE.md with specifics.
@@ -21,7 +22,8 @@ Each sub-project has its own CLAUDE.md with specifics.
 ## Architecture rules
 
 - Anything that differs between apps flows through `AppConfig` (defined in `packages/ui/src/config.tsx`): app name, console specs, the `core` object, and the native `EmulatorView` component. Each app's `App.tsx` builds its config and renders the shared `<AppRoot />`. Shared screens read it via `useAppConfig()` — never import app code from `packages/*`.
-- Dependency direction: `apps/*` → `@emulators/ui` → `@emulators/core-interface`. Native modules (`apps/*/modules/*`) import only from `@emulators/core-interface` (types), never from `@emulators/ui`.
+- Dependency direction: `apps/*` → `@emulators/ui` → `@emulators/storage` → `@emulators/core-interface`. Native modules (`apps/*/modules/*`) import only from `@emulators/core-interface` (types), never from `@emulators/ui`.
+- Persistent state lives in SQLite in `packages/storage`. ROM files are copied into `Paths.document/roms/` at import so the native core gets a real, durable `file://` path; imports are de-duplicated by content MD5; the DB stores relative filenames only — absolute URIs are derived at read time (`romFileUri`).
 - Video never crosses the JS bridge: each native module exposes a native view the core renders into directly. The `EmulatorCore` interface covers control, input, and persistence only.
 - Changing the contract in `packages/core-interface` requires updating all three Kotlin modules and their TS wrappers (`apps/*/modules/*/src/index.ts`) in the same change.
 
@@ -42,4 +44,4 @@ Native code changes under `modules/` require a rebuild (`expo run:android`), not
 
 ## Current state / roadmap
 
-Scaffolding is complete and typechecks. `apps/gba` has the real mGBA core integrated over JNI (git submodule at `apps/gba/modules/mgba-core/android/vendor/mgba`, pinned to 0.10.5 — run `git submodule update --init` after cloning). The melonDS and Azahar Kotlin modules are still stubs. ROM picking/library on the Home screen, the on-screen gamepad overlay, and savestate UI are still to be built. iOS/store submission config is out of scope.
+Scaffolding is complete and typechecks. `apps/gba` has the real mGBA core integrated over JNI (git submodule at `apps/gba/modules/mgba-core/android/vendor/mgba`, pinned to 0.10.5 — run `git submodule update --init` after cloning). The ROM library is built: SQLite-backed Home screen with import (picker → MD5 dedup → copy into `roms/`), favorite/delete, and boot-on-tap into the Emulator screen. The melonDS and Azahar Kotlin modules are still stubs. The on-screen gamepad overlay and savestate UI (blocked on exposing `RomInfo.sha1`) are still to be built. iOS/store submission config is out of scope.

@@ -1,0 +1,21 @@
+{
+  "name": "@emulators/storage",
+  "version": "0.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@emulators/core-interface": "*"
+  },
+  "peerDependencies": {
+    "expo-document-picker": "*",
+    "expo-file-system": "*",
+    "expo-sqlite": "*"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3"
+  }
+}
