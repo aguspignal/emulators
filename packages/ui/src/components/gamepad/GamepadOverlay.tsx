@@ -1,18 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AppState,
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
   type GestureResponderEvent,
   type NativeTouchEvent,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { ConsoleSpec, EmulatorButton } from "@emulators/core-interface";
+import type { EmulatorButton } from "@emulators/core-interface";
 import { useAppConfig } from "../../config";
 import { colors, radius } from "../../theme";
-import { buildGamepadLayout, type Rect, type Region } from "./layout";
+import type { GamepadLayout, Rect, Region } from "./layout";
 import { buttonsForTouch, hitRegion } from "./hitTest";
 
 const EMPTY_PRESSED: ReadonlySet<EmulatorButton> = new Set();
@@ -25,8 +23,12 @@ const PAD_FILL_PRESSED = "rgba(230, 0, 18, 0.62)";
 const PAD_BORDER = "rgba(242, 242, 245, 0.30)";
 
 export interface GamepadOverlayProps {
-  /** Drives which buttons exist; comes from the ROM's actual console. */
-  spec: ConsoleSpec;
+  /**
+   * The regions to draw and hit-test, in absolute screen coordinates. Built by
+   * the screen (via `useEmulatorLayout`) rather than here, so the pad and the
+   * emulator view are placed from one shared orientation decision.
+   */
+  layout: GamepadLayout;
   onMenu: () => void;
   /** Stops accepting touches and releases everything held (pause menu open). */
   suspended?: boolean;
@@ -41,21 +43,8 @@ export interface GamepadOverlayProps {
  * `nativeEvent.touches` itself — which is also why the menu is a region here
  * rather than a sibling `Pressable` that would steal the responder.
  */
-export function GamepadOverlay({ spec, onMenu, suspended = false }: GamepadOverlayProps) {
+export function GamepadOverlay({ layout, onMenu, suspended = false }: GamepadOverlayProps) {
   const { core } = useAppConfig();
-  const { width, height } = useWindowDimensions();
-  const { top, right, bottom, left } = useSafeAreaInsets();
-
-  const layout = useMemo(
-    () =>
-      buildGamepadLayout({
-        width,
-        height,
-        insets: { top, right, bottom, left },
-        buttons: spec.buttons,
-      }),
-    [width, height, top, right, bottom, left, spec.buttons],
-  );
 
   // The authoritative held set lives in a ref so input never waits on React.
   const pressed = useRef<Set<EmulatorButton>>(new Set());
@@ -156,7 +145,12 @@ export function GamepadOverlay({ spec, onMenu, suspended = false }: GamepadOverl
     return () => sub.remove();
   }, [releaseAll]);
 
-  useEffect(() => releaseAll, [releaseAll]);
+  // On unmount, and whenever a rotation rebuilds the pad: every button has just
+  // moved out from under the fingers holding it.
+  useEffect(() => {
+    releaseAll();
+    return releaseAll;
+  }, [layout, releaseAll]);
 
   return (
     <View

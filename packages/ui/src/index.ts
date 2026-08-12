@@ -14,8 +14,17 @@ export { GamepadOverlay } from './components/gamepad/GamepadOverlay';
 export type { GamepadOverlayProps } from './components/gamepad/GamepadOverlay';
 export { GameMenu } from './components/gamepad/GameMenu';
 export type { GameMenuProps } from './components/gamepad/GameMenu';
-export { buildGamepadLayout } from './components/gamepad/layout';
-export type { GamepadLayout, LayoutOptions, Rect, Region } from './components/gamepad/layout';
+export { buildGamepadLayout, buildEmulatorLayout } from './components/gamepad/layout';
+export type {
+  EmulatorLayout,
+  EmulatorLayoutOptions,
+  GamepadLayout,
+  LayoutOptions,
+  Orientation,
+  Rect,
+  Region,
+} from './components/gamepad/layout';
+export { useEmulatorLayout } from './components/gamepad/useEmulatorLayout';
 export { useRoms } from './storage/useRoms';
 export { formatBytes, formatLastPlayed } from './utils/format';
 export { showErrorAlert } from './utils/errors';

@@ -29,6 +29,10 @@ class MgbaCoreModule : Module() {
   @Volatile
   private var currentRom: ResolvedRom? = null
 
+  /** Set only when the activity lifecycle paused a running game, so only such a game resumes. */
+  @Volatile
+  private var resumeOnForeground = false
+
   private val context
     get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
 
@@ -62,6 +66,7 @@ class MgbaCoreModule : Module() {
         throw RomLoadException(uri)
       }
       currentRom = rom
+      resumeOnForeground = false
       MgbaCoreNative.clearKeys()
       setState("paused") // contract: paused at frame 0; start() begins from here
       MgbaCoreView.refreshAllLayouts()
@@ -78,6 +83,7 @@ class MgbaCoreModule : Module() {
       MgbaCoreNative.nativeUnloadRom()
       MgbaCoreNative.clearKeys()
       currentRom = null
+      resumeOnForeground = false
       setState("idle")
     }
 
@@ -92,6 +98,7 @@ class MgbaCoreModule : Module() {
       if (state == "running") {
         MgbaCoreNative.nativeSetPaused(true)
         setState("paused")
+        resumeOnForeground = false // an explicit pause outlives a trip to the background
       }
     }
 
@@ -107,6 +114,29 @@ class MgbaCoreModule : Module() {
     }
 
     Function("getState") { state }
+
+    // The emulation thread and the audio stream are native: without this they
+    // keep running (and playing) with the app backgrounded or the screen off,
+    // whatever JS does. Fires on the activity's onPause/onResume, so it also
+    // covers the screen simply being switched off. The shared UI pauses on
+    // AppState too; both paths are guarded on `state`, so they can't fight.
+    OnActivityEntersBackground {
+      if (state == "running") {
+        MgbaCoreNative.nativeSetPaused(true)
+        setState("paused")
+        resumeOnForeground = true
+      }
+    }
+
+    OnActivityEntersForeground {
+      if (resumeOnForeground) {
+        resumeOnForeground = false
+        if (state == "paused") {
+          MgbaCoreNative.nativeSetPaused(false)
+          setState("running")
+        }
+      }
+    }
 
     Function("setButton") { button: String, pressed: Boolean ->
       MgbaCoreNative.updateKey(button, pressed)
