@@ -7,9 +7,31 @@ export { HomeScreen } from './screens/HomeScreen';
 export { EmulatorScreen } from './screens/EmulatorScreen';
 export { RomListItem } from './components/RomListItem';
 export { EmptyLibrary } from './components/EmptyLibrary';
+export { ErrorBoundary } from './components/ErrorBoundary';
+export { ErrorState } from './components/ErrorState';
 export { PrimaryButton } from './components/PrimaryButton';
+export { GamepadOverlay } from './components/gamepad/GamepadOverlay';
+export type { GamepadOverlayProps } from './components/gamepad/GamepadOverlay';
+export { GameMenu } from './components/gamepad/GameMenu';
+export type { GameMenuProps } from './components/gamepad/GameMenu';
+export { SlotSheet } from './components/gamepad/SlotSheet';
+export type { SlotSheetProps } from './components/gamepad/SlotSheet';
+export { SecondaryButton } from './components/gamepad/SecondaryButton';
+export type { SecondaryButtonProps } from './components/gamepad/SecondaryButton';
+export { buildGamepadLayout, buildEmulatorLayout } from './components/gamepad/layout';
+export type {
+  EmulatorLayout,
+  EmulatorLayoutOptions,
+  GamepadLayout,
+  LayoutOptions,
+  Orientation,
+  Rect,
+  Region,
+} from './components/gamepad/layout';
+export { useEmulatorLayout } from './components/gamepad/useEmulatorLayout';
 export { useRoms } from './storage/useRoms';
-export { formatBytes, formatLastPlayed } from './utils/format';
+export { formatBytes, formatLastPlayed, formatRelativeTime } from './utils/format';
+export { showErrorAlert } from './utils/errors';
 export * as theme from './theme';
 // One import surface for apps: the storage API rides along with the UI.
 export * from '@emulators/storage';

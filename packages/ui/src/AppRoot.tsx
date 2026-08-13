@@ -1,9 +1,12 @@
+import { useCallback, useState } from 'react';
 import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SQLiteProvider } from 'expo-sqlite';
 import { DATABASE_NAME, migrate } from '@emulators/storage';
 import { AppConfigProvider, type AppConfig } from './config';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { ErrorState } from './components/ErrorState';
 import { RootNavigator } from './navigation/RootNavigator';
 import { colors } from './theme';
 
@@ -27,23 +30,40 @@ const navigationTheme = {
  *   }
  */
 export function AppRoot({ config }: { config: AppConfig }) {
+  const [dbError, setDbError] = useState<unknown>(null);
+  const onDbError = useCallback((error: Error) => {
+    console.error('SQLite failed to open:', error);
+    // SQLiteProvider invokes onError during render — defer the setState.
+    queueMicrotask(() => setDbError(error));
+  }, []);
+
   return (
-    <SafeAreaProvider>
-      {/* Non-suspense SQLiteProvider renders null for the few ms the DB takes
-          to open — imperceptible on the dark background, and children never
-          mount before useSQLiteContext() is safe. */}
-      <SQLiteProvider
-        databaseName={DATABASE_NAME}
-        onInit={migrate}
-        onError={(error) => console.error('SQLite failed to open:', error)}
-      >
-        <AppConfigProvider config={config}>
-          <StatusBar barStyle="light-content" />
-          <NavigationContainer theme={navigationTheme}>
-            <RootNavigator />
-          </NavigationContainer>
-        </AppConfigProvider>
-      </SQLiteProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <StatusBar barStyle="light-content" />
+        {dbError != null ? (
+          // Without this branch the errored provider renders null forever —
+          // a permanently blank app. "Try again" remounts it, which re-runs
+          // the open + migrate.
+          <ErrorState
+            title="Couldn't open your library"
+            message="The app's database failed to open."
+            actionLabel="Try again"
+            onAction={() => setDbError(null)}
+          />
+        ) : (
+          /* Non-suspense SQLiteProvider renders null for the few ms the DB
+             takes to open — imperceptible on the dark background, and children
+             never mount before useSQLiteContext() is safe. */
+          <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrate} onError={onDbError}>
+            <AppConfigProvider config={config}>
+              <NavigationContainer theme={navigationTheme}>
+                <RootNavigator />
+              </NavigationContainer>
+            </AppConfigProvider>
+          </SQLiteProvider>
+        )}
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

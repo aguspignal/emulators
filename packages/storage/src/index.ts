@@ -11,6 +11,14 @@ export {
 } from './roms';
 export type { NewRom } from './roms';
 export {
+  listSaveStates,
+  getSaveState,
+  upsertSaveState,
+  deleteSaveState,
+  deleteSaveStatesForRom,
+} from './saveStates';
+export type { SaveStateRow } from './saveStates';
+export {
   romsDirectory,
   sanitizeFileName,
   extensionOf,
@@ -20,6 +28,10 @@ export {
   uniqueFileName,
   romFileUri,
   deleteRomFile,
+  stateThumbsDirectory,
+  stateThumbUri,
+  deleteStateThumb,
+  deleteStateThumbsForRom,
 } from './files';
 export { pickAndImportRom, RomImportError } from './import';
 export type { RomImportResult } from './import';

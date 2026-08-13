@@ -35,6 +35,14 @@ public:
   bool saveState(const std::string& path);
   bool loadState(const std::string& path);
 
+  // Copies the frame currently on screen (the retained one while paused).
+  // False when no ROM is loaded.
+  bool captureFrame(std::vector<uint32_t>& out, unsigned* width, unsigned* height);
+
+  // Pushes dirty battery-save data out to disk now, instead of waiting for the
+  // idle frames that only a running game produces.
+  void flushSaves();
+
   void setKeys(uint32_t keys) { mKeys.store(keys, std::memory_order_relaxed); }
   void setVolume(float volume) { mAudio.setVolume(volume); }
   void setSpeed(float multiplier);
@@ -54,6 +62,8 @@ private:
   void emuLoop();
   // Runs a closure on the emulation thread between frames; returns its result.
   bool runOnEmuThread(std::function<bool()> fn);
+  // Emulation thread only, or once it has been joined.
+  void forceSaveClean();
   void pumpAudio();
   void blitLocked();  // caller holds mSurfaceMutex
 

@@ -12,6 +12,22 @@ export function formatBytes(bytes: number): string {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+
+/**
+ * Age of something that can happen many times a day — savestates, where
+ * "Today" would be useless for telling two slots apart.
+ */
+export function formatRelativeTime(timestamp: number): string {
+  const elapsed = Date.now() - timestamp;
+  if (elapsed < MINUTE_MS) return 'Just now';
+  if (elapsed < HOUR_MS) return `${Math.floor(elapsed / MINUTE_MS)}m ago`;
+  if (elapsed < DAY_MS) return `${Math.floor(elapsed / HOUR_MS)}h ago`;
+  const days = Math.floor(elapsed / DAY_MS);
+  if (days < 7) return `${days}d ago`;
+  return new Date(timestamp).toLocaleDateString();
+}
 
 export function formatLastPlayed(timestamp: number | null): string {
   if (timestamp == null) return 'Never played';
