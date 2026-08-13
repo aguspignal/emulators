@@ -11,6 +11,8 @@ import { useSQLiteContext } from 'expo-sqlite';
 import {
   deleteRomFile,
   deleteRomRow,
+  deleteSaveStatesForRom,
+  deleteStateThumbsForRom,
   pickAndImportRom,
   romFileUri,
   setFavorite,
@@ -27,7 +29,7 @@ import type { RootScreenProps } from '../navigation/types';
 
 /** The ROM library: list, import, favorite/delete, and boot-on-tap. */
 export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
-  const { consoles } = useAppConfig();
+  const { consoles, core } = useAppConfig();
   const db = useSQLiteContext();
   const { roms, loading, error, reload } = useRoms();
   const [importing, setImporting] = useState(false);
@@ -87,21 +89,24 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            // Deleting a ROM does NOT remove its battery save or savestates
-            // under filesDir/mgba/{saves,states}/<sha1>.* — JS has no access
-            // to the SHA-1. Resolved by the deferred RomInfo.sha1 change.
             try {
               await deleteRomRow(db, rom.id);
             } catch (error) {
               showErrorAlert("Couldn't delete game", error);
               return;
             }
-            // Row first, then file: failing here leaves only an orphan file
-            // on disk, never a library entry pointing at a missing ROM.
+            // Row first, then everything it owned: failing below leaves only
+            // orphan files on disk, never a library entry pointing at a
+            // missing ROM. `sha1` is null only for a ROM that was never
+            // played since the upgrade that added the column — which is also
+            // a ROM that has no saves.
             try {
               deleteRomFile(rom.file_name);
+              await deleteSaveStatesForRom(db, rom.id);
+              deleteStateThumbsForRom(rom.id);
+              if (rom.sha1) await core.deleteSaveData(rom.sha1);
             } catch (error) {
-              console.error('ROM file left behind:', error);
+              console.error('leftovers from deleted ROM:', error);
             }
             void reload();
           },
@@ -109,7 +114,7 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
         { text: 'Cancel', style: 'cancel' },
       ]);
     },
-    [db, reload]
+    [db, core, reload]
   );
 
   const consoleName = useCallback(

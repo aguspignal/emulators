@@ -2,57 +2,57 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, StyleSheet, View } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useKeepAwake } from 'expo-keep-awake';
-import { CONSOLES, type EmulatorSubscription, type RomInfo } from '@emulators/core-interface';
-import { applyRomInfo } from '@emulators/storage';
+import {
+  AUTO_SAVESTATE_SLOT,
+  CONSOLES,
+  type EmulatorSubscription,
+  type RomInfo,
+} from '@emulators/core-interface';
+import {
+  applyRomInfo,
+  deleteStateThumb,
+  getSaveState,
+  stateThumbUri,
+  upsertSaveState,
+} from '@emulators/storage';
 import { useAppConfig } from '../config';
 import { colors } from '../theme';
 import { showErrorAlert } from '../utils/errors';
 import { GamepadOverlay } from '../components/gamepad/GamepadOverlay';
 import { GameMenu } from '../components/gamepad/GameMenu';
+import { SlotSheet } from '../components/gamepad/SlotSheet';
 import { useEmulatorLayout } from '../components/gamepad/useEmulatorLayout';
 import type { Rect } from '../components/gamepad/layout';
 import type { RootScreenProps } from '../navigation/types';
 
+/** Which menu layer is up. The gamepad is suspended for all but 'closed'. */
+type MenuView = 'closed' | 'root' | 'save' | 'load';
+
 /**
- * Hosts the app's native emulator view, the on-screen gamepad, and the pause
- * menu. Will grow savestate controls.
+ * Hosts the app's native emulator view, the on-screen gamepad, the pause menu,
+ * and the savestate slots.
  */
 export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'>) {
   const { core, EmulatorView, consoles } = useAppConfig();
   const db = useSQLiteContext();
   const { romId, romUri } = route.params;
   const [booted, setBooted] = useState<RomInfo | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menu, setMenu] = useState<MenuView>('closed');
+  // Read from callbacks that must not be re-created (and re-subscribed) every
+  // time the game boots.
+  const bootedRef = useRef(false);
 
   useKeepAwake();
 
   useEffect(() => {
     let cancelled = false;
     let errorSub: EmulatorSubscription | undefined;
-    core
-      .loadRom(romUri)
-      .then((info) => {
-        if (cancelled) return;
-        // Subscribe only after boot: the core both emits 'error' and rejects
-        // on the same loadRom failure, so an earlier subscription would
-        // double-alert. Post-boot, the event covers mid-game errors.
-        errorSub = core.addListener('error', ({ message }) =>
-          showErrorAlert(
-            'Emulator problem',
-            new Error(message),
-            'The emulator hit a problem. The game may not work correctly.'
-          )
-        );
-        core.start();
-        setBooted(info);
-        // Reconcile the import-time guess: the picker can only infer gb vs
-        // gbc from the extension, while the core reads the ROM header.
-        // Log-only: a failed DB write must never eject a running game.
-        applyRomInfo(db, romId, info).catch((error: unknown) =>
-          console.error('applyRomInfo failed:', error)
-        );
-      })
-      .catch((error: unknown) => {
+
+    const boot = async () => {
+      let info: RomInfo;
+      try {
+        info = await core.loadRom(romUri);
+      } catch (error) {
         if (cancelled) return;
         showErrorAlert(
           "Couldn't start game",
@@ -60,13 +60,98 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
           "This game couldn't be started. The ROM file may be missing, corrupted, or unsupported.",
           () => navigation.goBack()
         );
-      });
+        return;
+      }
+      if (cancelled) return;
+
+      // Subscribe only after boot: the core both emits 'error' and rejects
+      // on the same loadRom failure, so an earlier subscription would
+      // double-alert. Post-boot, the event covers mid-game errors.
+      errorSub = core.addListener('error', ({ message }) =>
+        showErrorAlert(
+          'Emulator problem',
+          new Error(message),
+          'The emulator hit a problem. The game may not work correctly.'
+        )
+      );
+
+      // Pick up where the last session left off. A state that won't load —
+      // corrupt, or written by an older core — must never keep the game from
+      // starting; the cost of failing is beginning from the ROM's own boot.
+      try {
+        const auto = await getSaveState(db, romId, AUTO_SAVESTATE_SLOT);
+        if (auto && !cancelled) await core.loadState(AUTO_SAVESTATE_SLOT);
+      } catch (error) {
+        console.warn('auto-resume failed; starting fresh:', error);
+      }
+      if (cancelled) return;
+
+      core.start();
+      setBooted(info);
+      bootedRef.current = true;
+      // Reconcile the import-time guess: the picker can only infer gb vs
+      // gbc from the extension, while the core reads the ROM header. Also
+      // records the ROM hash that names its save files.
+      // Log-only: a failed DB write must never eject a running game.
+      applyRomInfo(db, romId, info).catch((error: unknown) =>
+        console.error('applyRomInfo failed:', error)
+      );
+    };
+    void boot();
+
     return () => {
       cancelled = true;
+      bootedRef.current = false;
       errorSub?.remove();
       core.unloadRom().catch((error: unknown) => console.error('unloadRom failed:', error));
     };
   }, [core, db, romId, romUri, navigation]);
+
+  /**
+   * Everything that follows a successful `core.saveState`: a preview frame for
+   * the slot, the library row that makes the slot show as occupied, and the
+   * thumbnail the slot used to have.
+   */
+  const recordState = useCallback(
+    async (slot: number) => {
+      const stale = await getSaveState(db, romId, slot);
+      const savedAt = Date.now();
+      try {
+        await core.captureScreenshot(stateThumbUri(romId, slot, savedAt));
+      } catch (error) {
+        // A slot with no preview is still a perfectly good savestate.
+        console.warn('savestate thumbnail failed:', error);
+      }
+      await upsertSaveState(db, romId, slot, savedAt);
+      // Only after the row points at the new file, and never when the two
+      // names collide — that would delete the thumbnail just written.
+      if (stale && stale.saved_at !== savedAt) {
+        try {
+          deleteStateThumb(romId, slot, stale.saved_at);
+        } catch (error) {
+          console.error('old thumbnail left behind:', error);
+        }
+      }
+    },
+    [core, db, romId]
+  );
+
+  /** Writes the automatic slot — the state the next boot resumes from. */
+  const autoSaveInFlight = useRef(false);
+  const autoSave = useCallback(async () => {
+    if (!bootedRef.current || autoSaveInFlight.current) return;
+    autoSaveInFlight.current = true;
+    try {
+      await core.saveState(AUTO_SAVESTATE_SLOT);
+      await recordState(AUTO_SAVESTATE_SLOT);
+    } catch (error) {
+      // Silent: the player asked to leave, not to save. They still have their
+      // in-game save and any slot they wrote by hand.
+      console.error('auto-save failed:', error);
+    } finally {
+      autoSaveInFlight.current = false;
+    }
+  }, [core, recordState]);
 
   // Emulation must not keep running with the app backgrounded or the screen
   // off. The core's state is the only thing consulted: if the game is already
@@ -82,29 +167,79 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
           resumeOnForeground.current = false;
           core.resume();
         }
-      } else if (core.getState() === 'running') {
+        return;
+      }
+      if (core.getState() === 'running') {
         resumeOnForeground.current = true;
         core.pause();
       }
+      // Android can kill a backgrounded process without another word, so this
+      // is the last chance to record where the player was.
+      void autoSave();
     });
     return () => sub.remove();
-  }, [core]);
+  }, [core, autoSave]);
+
+  // Leaving the game saves it first. The pop is held until that finishes:
+  // unmounting tears the core down, and a save still in flight would be lost.
+  const exitHandled = useRef(false);
+  useEffect(
+    () =>
+      navigation.addListener('beforeRemove', (e) => {
+        // Nothing to save before the game booted (the failure alert pops the
+        // screen itself), and the re-dispatched action must pass straight
+        // through or the screen could never be left.
+        if (exitHandled.current || !bootedRef.current) return;
+        e.preventDefault();
+        exitHandled.current = true;
+        core.pause();
+        void autoSave().finally(() => navigation.dispatch(e.data.action));
+      }),
+    [navigation, core, autoSave]
+  );
 
   const openMenu = useCallback(() => {
     core.pause();
-    setMenuOpen(true);
+    setMenu('root');
   }, [core]);
 
-  const resume = useCallback(() => {
-    setMenuOpen(false);
+  const resumeGame = useCallback(() => {
+    setMenu('closed');
     core.resume();
   }, [core]);
 
   const reset = useCallback(() => {
     core.reset();
-    setMenuOpen(false);
+    setMenu('closed');
     core.resume();
   }, [core]);
+
+  const saveToSlot = useCallback(
+    async (slot: number) => {
+      try {
+        await core.saveState(slot);
+        await recordState(slot);
+      } catch (error) {
+        showErrorAlert("Couldn't save state", error);
+        return; // stay in the sheet so the slot can be tried again
+      }
+      resumeGame();
+    },
+    [core, recordState, resumeGame]
+  );
+
+  const loadFromSlot = useCallback(
+    async (slot: number) => {
+      try {
+        await core.loadState(slot);
+      } catch (error) {
+        showErrorAlert("Couldn't load state", error);
+        return;
+      }
+      resumeGame();
+    },
+    [core, resumeGame]
+  );
 
   // The pad is laid out for the console the core actually detected from the
   // ROM header, not the app's headline console: a Game Boy ROM in the GBA app
@@ -124,13 +259,26 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
         <View style={[styles.padBand, { top: layout.padArea.y }]} />
       )}
       <EmulatorView style={absoluteRect(layout.screen)} />
-      {booted && <GamepadOverlay layout={layout.pad} onMenu={openMenu} suspended={menuOpen} />}
-      {menuOpen && (
+      {booted && (
+        <GamepadOverlay layout={layout.pad} onMenu={openMenu} suspended={menu !== 'closed'} />
+      )}
+      {booted && menu === 'root' && (
         <GameMenu
-          title={booted?.title ?? ''}
-          onResume={resume}
+          title={booted.title}
+          onResume={resumeGame}
+          onSaveState={() => setMenu('save')}
+          onLoadState={() => setMenu('load')}
           onReset={reset}
           onExit={() => navigation.goBack()}
+        />
+      )}
+      {booted && (menu === 'save' || menu === 'load') && (
+        <SlotSheet
+          mode={menu}
+          romId={romId}
+          spec={spec}
+          onPick={(slot) => void (menu === 'save' ? saveToSlot(slot) : loadFromSlot(slot))}
+          onBack={() => setMenu('root')}
         />
       )}
     </View>

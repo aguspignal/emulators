@@ -65,11 +65,16 @@ export async function applyRomInfo(
 
   await db.runAsync(
     `UPDATE roms
-     SET header_title = ?, console_id = ?, size = ?, last_played_at = ?, play_count = play_count + 1
+     SET header_title = ?, console_id = ?, size = ?,
+         -- Cores that couldn't hash the ROM report ''; keep whatever we already
+         -- know rather than forgetting where this ROM's saves live.
+         sha1 = COALESCE(NULLIF(?, ''), sha1),
+         last_played_at = ?, play_count = play_count + 1
      WHERE id = ?`,
     headerTitle,
     info.console,
     info.size,
+    info.sha1,
     Date.now(),
     id
   );

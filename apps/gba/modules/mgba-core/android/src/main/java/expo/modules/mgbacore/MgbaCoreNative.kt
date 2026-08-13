@@ -60,6 +60,9 @@ object MgbaCoreNative {
   external fun nativeSetKeys(keys: Int)
   external fun nativeSaveState(path: String): Boolean
   external fun nativeLoadState(path: String): Boolean
+  /** [width, height, pixels...] as opaque ARGB, or null when no ROM is loaded. */
+  external fun nativeCaptureFrame(): IntArray?
+  external fun nativeFlushSaves()
   external fun nativeSetVolume(volume: Float)
   external fun nativeSetSpeed(multiplier: Float)
   external fun nativeSurfaceChanged(surface: Surface?)

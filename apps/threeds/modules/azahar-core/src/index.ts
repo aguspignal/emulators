@@ -24,6 +24,9 @@ declare class AzaharCoreNativeModule extends NativeModule<NativeEvents> {
   setTouch(x: number, y: number, pressed: boolean): void;
   saveState(slot: number): Promise<void>;
   loadState(slot: number): Promise<void>;
+  deleteState(slot: number): Promise<void>;
+  deleteSaveData(sha1: string): Promise<void>;
+  captureScreenshot(uri: string): Promise<void>;
   setVolume(volume: number): void;
   setSpeed(multiplier: number): void;
 }
@@ -47,6 +50,9 @@ export const core: EmulatorCore = {
   setTouch: (x, y, pressed) => native.setTouch(x, y, pressed),
   saveState: (slot) => native.saveState(slot),
   loadState: (slot) => native.loadState(slot),
+  deleteState: (slot) => native.deleteState(slot),
+  deleteSaveData: (sha1) => native.deleteSaveData(sha1),
+  captureScreenshot: (uri) => native.captureScreenshot(uri),
   setVolume: (volume) => native.setVolume(volume),
   setSpeed: (multiplier) => native.setSpeed(multiplier),
   addListener: <E extends EmulatorEventName>(

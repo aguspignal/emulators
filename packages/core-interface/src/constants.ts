@@ -77,3 +77,9 @@ export const CONSOLES: Record<ConsoleId, ConsoleSpec> = {
 };
 
 export const SAVESTATE_SLOTS = 10;
+
+/**
+ * Slot reserved for the automatic savestate written when a game is closed or
+ * backgrounded, and reloaded on the next boot. Never offered as a save target.
+ */
+export const AUTO_SAVESTATE_SLOT = 0;

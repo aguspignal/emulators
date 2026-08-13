@@ -1,7 +1,9 @@
 #include <android/native_window_jni.h>
 #include <jni.h>
 
+#include <cstdint>
 #include <string>
+#include <vector>
 
 #include <mgba/core/version.h>
 
@@ -66,6 +68,40 @@ jboolean nativeLoadState(JNIEnv* env, jclass, jstring path) {
   return EmulatorEngine::instance().loadState(toString(env, path));
 }
 
+// Returns [width, height, pixels...] in one hop, or null when nothing is
+// loaded. Kotlin builds the Bitmap straight off this array.
+jintArray nativeCaptureFrame(JNIEnv* env, jclass) {
+  std::vector<uint32_t> pixels;
+  unsigned width = 0;
+  unsigned height = 0;
+  if (!EmulatorEngine::instance().captureFrame(pixels, &width, &height)) {
+    return nullptr;
+  }
+  const size_t count = static_cast<size_t>(width) * height;
+  jintArray result = env->NewIntArray(static_cast<jsize>(2 + count));
+  if (!result) {
+    return nullptr;
+  }
+  const jint dims[2] = {static_cast<jint>(width), static_cast<jint>(height)};
+  env->SetIntArrayRegion(result, 0, 2, dims);
+
+  // The framebuffer is RGBX with red in the low byte — that's what the blit
+  // hands to WINDOW_FORMAT_RGBX_8888. Bitmap wants opaque ARGB ints, so red and
+  // blue swap places.
+  std::vector<jint> argb(count);
+  for (size_t i = 0; i < count; i++) {
+    const uint32_t pixel = pixels[i];
+    argb[i] = static_cast<jint>(0xFF000000u | ((pixel & 0xFFu) << 16) | (pixel & 0xFF00u) |
+                                ((pixel >> 16) & 0xFFu));
+  }
+  env->SetIntArrayRegion(result, 2, static_cast<jsize>(count), argb.data());
+  return result;
+}
+
+void nativeFlushSaves(JNIEnv*, jclass) {
+  EmulatorEngine::instance().flushSaves();
+}
+
 void nativeSetVolume(JNIEnv*, jclass, jfloat volume) {
   EmulatorEngine::instance().setVolume(volume);
 }
@@ -95,6 +131,8 @@ const JNINativeMethod kMethods[] = {
     {"nativeSetKeys", "(I)V", reinterpret_cast<void*>(nativeSetKeys)},
     {"nativeSaveState", "(Ljava/lang/String;)Z", reinterpret_cast<void*>(nativeSaveState)},
     {"nativeLoadState", "(Ljava/lang/String;)Z", reinterpret_cast<void*>(nativeLoadState)},
+    {"nativeCaptureFrame", "()[I", reinterpret_cast<void*>(nativeCaptureFrame)},
+    {"nativeFlushSaves", "()V", reinterpret_cast<void*>(nativeFlushSaves)},
     {"nativeSetVolume", "(F)V", reinterpret_cast<void*>(nativeSetVolume)},
     {"nativeSetSpeed", "(F)V", reinterpret_cast<void*>(nativeSetSpeed)},
     {"nativeSurfaceChanged", "(Landroid/view/Surface;)V", reinterpret_cast<void*>(nativeSurfaceChanged)},

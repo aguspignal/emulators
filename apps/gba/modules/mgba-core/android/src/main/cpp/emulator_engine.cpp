@@ -10,6 +10,13 @@
 #include <mgba/core/core.h>
 #include <mgba/core/serialize.h>
 #include <mgba-util/vfs.h>
+// Internal headers: legal here only because this target compiles with the same
+// M_CORE_GBA/M_CORE_GB defines as libmgba (see CMakeLists.txt). Never include
+// them from a translation unit that doesn't.
+#include <mgba/internal/defines.h>
+#include <mgba/internal/gb/gb.h>
+#include <mgba/internal/gba/gba.h>
+#include <mgba/internal/gba/savedata.h>
 
 #define LOG_TAG "MgbaEngine"
 #define ALOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -100,6 +107,11 @@ void EmulatorEngine::unloadRom() {
   }
   mAudio.close();
   if (mCore_) {
+    // The thread is gone, so this runs inline. deinit() msyncs the mapped save
+    // but never writes the RTC footer, and it drops a masked save's pending
+    // writeback — an in-game save made in the last few frames before exit, or
+    // right after loading a state, would be lost without this.
+    forceSaveClean();
     mCoreConfigDeinit(&mCore_->config);
     mCore_->deinit(mCore_);  // flushes the battery save through its VFile
     mCore_ = nullptr;
@@ -151,11 +163,66 @@ bool EmulatorEngine::loadState(const std::string& path) {
     if (!vf) {
       return false;
     }
-    bool ok = mCoreLoadStateNamed(mCore_, vf,
-                                  SAVESTATE_SAVEDATA | SAVESTATE_RTC | SAVESTATE_METADATA);
+    // No SAVESTATE_SAVEDATA, deliberately. The state's embedded save is applied
+    // either way; the flag only decides whether it is written straight over the
+    // real .sav (GBASavedataLoad — loading an old state would silently throw
+    // away newer in-game progress) or masked over it read-only, committing only
+    // if the game itself saves afterwards. The mask is what upstream mGBA
+    // defaults to. SAVESTATE_METADATA has no meaning on load.
+    bool ok = mCoreLoadStateNamed(mCore_, vf, SAVESTATE_RTC);
     vf->close(vf);
     return ok;
   });
+}
+
+bool EmulatorEngine::captureFrame(std::vector<uint32_t>& out, unsigned* width, unsigned* height) {
+  // By reference: runOnEmuThread blocks until the closure has run.
+  return runOnEmuThread([this, &out, width, height] {
+    if (mFramebuffer.empty()) {
+      return false;
+    }
+    out = mFramebuffer;
+    *width = mFbWidth;
+    *height = mFbHeight;
+    return true;
+  });
+}
+
+void EmulatorEngine::flushSaves() {
+  runOnEmuThread([this] {
+    forceSaveClean();
+    return true;
+  });
+}
+
+void EmulatorEngine::forceSaveClean() {
+  if (!mCore_) {
+    return;
+  }
+  // mGBA syncs a dirty save only once mSAVEDATA_CLEANUP_THRESHOLD frames have
+  // passed with no further writes — frames a paused or backgrounded game never
+  // runs. Two calls drive that state machine by hand: the first stamps the dirt
+  // age, the second ages past the threshold so the sync (with the RTC footer,
+  // and a masked save's writeback) actually happens. Both are no-ops on a save
+  // that isn't dirty.
+  switch (mCore_->platform(mCore_)) {
+    case mPLATFORM_GBA: {
+      auto* gba = static_cast<struct GBA*>(mCore_->board);
+      const uint32_t frame = gba->video.frameCounter;
+      GBASavedataClean(&gba->memory.savedata, frame);
+      GBASavedataClean(&gba->memory.savedata, frame + mSAVEDATA_CLEANUP_THRESHOLD + 1);
+      break;
+    }
+    case mPLATFORM_GB: {
+      auto* gb = static_cast<struct GB*>(mCore_->board);
+      const uint32_t frame = gb->video.frameCounter;
+      GBSramClean(gb, frame);
+      GBSramClean(gb, frame + mSAVEDATA_CLEANUP_THRESHOLD + 1);
+      break;
+    }
+    default:
+      break;
+  }
 }
 
 void EmulatorEngine::setSpeed(float multiplier) {

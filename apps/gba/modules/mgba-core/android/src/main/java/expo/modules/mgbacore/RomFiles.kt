@@ -40,6 +40,18 @@ object RomFiles {
   fun statePath(context: Context, sha1: String, slot: Int): String =
     File(dir(context, "states"), "$sha1.ss$slot").absolutePath
 
+  /**
+   * Removes everything this ROM owns: the battery save and every savestate.
+   * Matches states by prefix rather than walking slot numbers, so a stale file
+   * from a different slot count can't survive.
+   */
+  fun deleteSaveData(context: Context, sha1: String) {
+    File(dir(context, "saves"), "$sha1.sav").delete()
+    dir(context, "states")
+      .listFiles { file -> file.name.startsWith("$sha1.ss") }
+      ?.forEach { it.delete() }
+  }
+
   /** Maps the loaded core's platform to the contract's ConsoleId. */
   fun consoleFor(platform: Int, romFile: File): String = when (platform) {
     MgbaCoreNative.PLATFORM_GB -> if (isGbc(romFile)) "gbc" else "gb"

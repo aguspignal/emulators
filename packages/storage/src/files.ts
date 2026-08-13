@@ -71,3 +71,41 @@ export function deleteRomFile(fileName: string): void {
   const file = new File(romsDirectory(), fileName);
   if (file.exists) file.delete();
 }
+
+/**
+ * `Paths.document/state-thumbs/` — created on first use. Savestate previews
+ * live here rather than in the core's private layout, so the shared UI can
+ * render them without knowing how any core names its files.
+ */
+export function stateThumbsDirectory(): Directory {
+  const dir = new Directory(Paths.document, 'state-thumbs');
+  dir.create({ intermediates: true, idempotent: true });
+  return dir;
+}
+
+/**
+ * `<romId>-<slot>-<savedAt>.png`. The timestamp is part of the name on
+ * purpose: React Native caches images by URI, so a slot written again under
+ * its old name would keep showing the previous frame.
+ */
+function stateThumbName(romId: number, slot: number, savedAt: number): string {
+  return `${romId}-${slot}-${savedAt}.png`;
+}
+
+export function stateThumbUri(romId: number, slot: number, savedAt: number): string {
+  return new File(stateThumbsDirectory(), stateThumbName(romId, slot, savedAt)).uri;
+}
+
+export function deleteStateThumb(romId: number, slot: number, savedAt: number): void {
+  const file = new File(stateThumbsDirectory(), stateThumbName(romId, slot, savedAt));
+  if (file.exists) file.delete();
+}
+
+/** Every thumbnail belonging to a ROM, whatever slot or timestamp. */
+export function deleteStateThumbsForRom(romId: number): void {
+  // Trailing dash included, or ROM 1 would sweep up ROM 12's thumbnails.
+  const prefix = `${romId}-`;
+  for (const entry of stateThumbsDirectory().list()) {
+    if (entry instanceof File && entry.name.startsWith(prefix)) entry.delete();
+  }
+}
