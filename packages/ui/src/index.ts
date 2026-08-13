@@ -8,6 +8,7 @@ export { RootNavigator } from './navigation/RootNavigator';
 export { HomeScreen } from './screens/HomeScreen';
 export { EmulatorScreen } from './screens/EmulatorScreen';
 export { SettingsScreen } from './screens/SettingsScreen';
+export { LicenseScreen } from './screens/LicenseScreen';
 export { RomTile } from './components/RomTile';
 export { posterGridLayout } from './components/posterGrid';
 export type { PosterGridLayout } from './components/posterGrid';

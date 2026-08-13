@@ -8,12 +8,14 @@ import { core, EmulatorView } from "./modules/mgba-core";
 import { SOURCE as GBA_COVERS } from "./assets/covers/gba";
 import { SOURCE as GBC_COVERS } from "./assets/covers/gbc";
 import { SOURCE as GB_COVERS } from "./assets/covers/gb";
+import { LICENSE_NOTICE } from "./license";
 
 const config: AppConfig = {
   appName: "GBA/GBC/GB Emulator",
   consoles: [CONSOLES.gba, CONSOLES.gbc, CONSOLES.gb],
   core,
   EmulatorView,
+  licenseNotice: LICENSE_NOTICE,
   coverIndexes: [
     { console: "gba", source: GBA_COVERS },
     { console: "gbc", source: GBC_COVERS },
