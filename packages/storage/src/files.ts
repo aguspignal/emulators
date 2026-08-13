@@ -109,3 +109,51 @@ export function deleteStateThumbsForRom(romId: number): void {
     if (entry instanceof File && entry.name.startsWith(prefix)) entry.delete();
   }
 }
+
+/**
+ * `Paths.document/covers/` — created on first use. Box art downloaded from
+ * the thumbnail CDN, and DS banner icons decoded from the ROM itself.
+ */
+export function coversDirectory(): Directory {
+  const dir = new Directory(Paths.document, 'covers');
+  dir.create({ intermediates: true, idempotent: true });
+  return dir;
+}
+
+/**
+ * `<romId>-<stamp>.png`. The stamp exists for the same reason as the one in
+ * `stateThumbName`: React Native caches images by URI, so a cover replaced
+ * under its old name would keep rendering the previous art.
+ */
+export function coverFileName(romId: number, stamp: number): string {
+  return `${romId}-${stamp}.png`;
+}
+
+/** Takes the stored `roms.cover_file`, not a ROM id — the DB owns the name. */
+export function coverUri(fileName: string): string {
+  return new File(coversDirectory(), fileName).uri;
+}
+
+export function deleteCover(fileName: string): void {
+  const file = new File(coversDirectory(), fileName);
+  if (file.exists) file.delete();
+}
+
+/** Every cover belonging to a ROM, whatever stamp. Also catches `.part` files. */
+export function deleteCoversForRom(romId: number): void {
+  // Trailing dash included, or ROM 1 would sweep up ROM 12's covers.
+  const prefix = `${romId}-`;
+  for (const entry of coversDirectory().list()) {
+    if (entry instanceof File && entry.name.startsWith(prefix)) entry.delete();
+  }
+}
+
+/**
+ * Covers download to `<name>.part` and are renamed into place, so a process
+ * killed mid-download leaves one behind. Called once at the top of a sweep.
+ */
+export function sweepPartialCovers(): void {
+  for (const entry of coversDirectory().list()) {
+    if (entry instanceof File && entry.name.endsWith('.part')) entry.delete();
+  }
+}

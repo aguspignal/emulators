@@ -1,7 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { RomRow } from '@emulators/storage';
-import { colors, radius, spacing, typography } from '../theme';
-import { formatBytes, formatLastPlayed } from '../utils/format';
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import type { RomRow } from "@emulators/storage";
+import { colors, radius, spacing, typography } from "../theme";
+import { formatBytes, formatLastPlayed } from "../utils/format";
 
 /**
  * Title is always `display_name` — the picked filename beats header titles,
@@ -41,19 +41,19 @@ export function RomListItem({
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     marginHorizontal: spacing.md,
     marginBottom: spacing.sm,
     padding: spacing.md,
     gap: spacing.md,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   rowPressed: { opacity: 0.7 },
   favoriteBar: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     top: 0,
     bottom: 0,
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   info: { flex: 1, gap: spacing.xs },
-  title: { ...typography.body, fontWeight: '600', color: colors.text },
+  title: { ...typography.body, fontWeight: "600", color: colors.text },
   subtitle: { ...typography.caption, color: colors.textMuted },
   lastPlayed: { ...typography.caption, color: colors.textMuted },
 });

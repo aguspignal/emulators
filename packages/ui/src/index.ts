@@ -6,6 +6,9 @@ export { RootNavigator } from './navigation/RootNavigator';
 export { HomeScreen } from './screens/HomeScreen';
 export { EmulatorScreen } from './screens/EmulatorScreen';
 export { RomListItem } from './components/RomListItem';
+export { RomTile } from './components/RomTile';
+export { posterGridLayout } from './components/posterGrid';
+export type { PosterGridLayout } from './components/posterGrid';
 export { EmptyLibrary } from './components/EmptyLibrary';
 export { ErrorBoundary } from './components/ErrorBoundary';
 export { ErrorState } from './components/ErrorState';
@@ -30,6 +33,7 @@ export type {
 } from './components/gamepad/layout';
 export { useEmulatorLayout } from './components/gamepad/useEmulatorLayout';
 export { useRoms } from './storage/useRoms';
+export { useCoverSweep } from './storage/useCoverSweep';
 export { formatBytes, formatLastPlayed, formatRelativeTime } from './utils/format';
 export { showErrorAlert } from './utils/errors';
 export * as theme from './theme';
