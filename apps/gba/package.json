@@ -23,6 +23,7 @@
     "expo-dev-client": "~57.0.11",
     "expo-document-picker": "~57.0.1",
     "expo-file-system": "~57.0.2",
+    "expo-haptics": "~57.0.1",
     "expo-keep-awake": "~57.0.1",
     "expo-sqlite": "~57.0.1",
     "expo-status-bar": "~57.0.1",

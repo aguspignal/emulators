@@ -7,8 +7,10 @@ import {
   type GestureResponderEvent,
   type NativeTouchEvent,
 } from "react-native";
+import * as Haptics from "expo-haptics";
 import type { EmulatorButton } from "@emulators/core-interface";
 import { useAppConfig } from "../../config";
+import { useSettings } from "../../settings/SettingsContext";
 import { colors, radius } from "../../theme";
 import type { GamepadLayout, Rect, Region } from "./layout";
 import { buttonsForTouch, hitRegion } from "./hitTest";
@@ -45,6 +47,14 @@ export interface GamepadOverlayProps {
  */
 export function GamepadOverlay({ layout, onMenu, suspended = false }: GamepadOverlayProps) {
   const { core } = useAppConfig();
+  const { hapticsEnabled } = useSettings();
+
+  // Fire-and-forget: input must never wait on the haptics bridge call, and a
+  // device without a vibrator failing the promise is not worth reporting.
+  const buzz = useCallback(() => {
+    if (!hapticsEnabled) return;
+    Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Virtual_Key).catch(() => {});
+  }, [hapticsEnabled]);
 
   // The authoritative held set lives in a ref so input never waits on React.
   const pressed = useRef<Set<EmulatorButton>>(new Set());
@@ -56,10 +66,12 @@ export function GamepadOverlay({ layout, onMenu, suspended = false }: GamepadOve
     (next: Set<EmulatorButton>) => {
       const prev = pressed.current;
       let changed = false;
+      let pressedNew = false;
       for (const button of next) {
         if (!prev.has(button)) {
           core.setButton(button, true);
           changed = true;
+          pressedNew = true;
         }
       }
       for (const button of prev) {
@@ -69,10 +81,13 @@ export function GamepadOverlay({ layout, onMenu, suspended = false }: GamepadOve
         }
       }
       pressed.current = next;
+      // One tick per event, not per button — a diagonal is one press to the
+      // thumb. Sliding onto a new button ticks too, so D-pad rolls feel real.
+      if (pressedNew) buzz();
       // Only real transitions re-render; a move that changes nothing is free.
       if (changed) setVisiblePressed(next);
     },
-    [core],
+    [core, buzz],
   );
 
   const releaseAll = useCallback(() => {
@@ -121,13 +136,14 @@ export function GamepadOverlay({ layout, onMenu, suspended = false }: GamepadOve
         if (region?.kind === "menu") {
           // One-shot, never held. The screen suspends us, which releases
           // anything still down.
+          buzz();
           onMenu();
           return;
         }
       }
       sync(event, false);
     },
-    [layout, onMenu, sync],
+    [layout, onMenu, sync, buzz],
   );
 
   const handleMove = useCallback((event: GestureResponderEvent) => sync(event, false), [sync]);

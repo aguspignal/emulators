@@ -6,9 +6,10 @@ SQLite-backed ROM library (schema, queries, import flow) plus the on-disk ROM fi
 
 ## Structure
 
-- `src/schema.ts` — `DATABASE_NAME`, `RomRow`, `migrate()` (passed to `SQLiteProvider`'s `onInit`). Two tables: `roms` and `save_states`.
+- `src/schema.ts` — `DATABASE_NAME`, `RomRow`, `migrate()` (passed to `SQLiteProvider`'s `onInit`). Three tables: `roms`, `save_states` and `settings`.
 - `src/roms.ts` — queries. Plain functions taking `db` first (no hooks), so they work in effects and event handlers alike.
 - `src/saveStates.ts` — one row per written savestate slot (`rom_id`, `slot`, `saved_at`, composite PK). This is metadata *about* files the core owns, never the states themselves; `upsertSaveState` is what makes a slot show as occupied.
+- `src/settings.ts` — `getSetting`/`setSetting` over the `settings` key-value table. Values are strings, callers own the encoding (booleans are `'1'`/`'0'`); a missing key means "never set" so code-side defaults apply without seeding rows.
 - `src/files.ts` — the `roms/` directory, filename sanitizing/uniquing, extension↔console matching, `romFileUri`, and the `state-thumbs/` and `covers/` directories.
 - `src/coverIndex.ts` — the bundled MD5→canonical-name tables (`CoverIndex`), parsed lazily into lookup maps and memoized per index object.
 - `src/covers.ts` — cover art: libretro system folders, URL building, the offline resolver, `ensureCover` (one ROM), `sweepCovers` (a bounded batch). **The only networking in the repo.**
