@@ -9,6 +9,8 @@ export type RootStackParamList = {
    */
   Emulator: { romId: number; romUri: string; romName: string };
   Settings: undefined;
+  /** Reads its text from `AppConfig.licenseNotice`, so it takes no params. */
+  License: undefined;
 };
 
 export type RootScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<

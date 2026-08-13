@@ -6,6 +6,7 @@ import { useAppConfig } from "../config";
 import { HomeScreen } from "../screens/HomeScreen";
 import { EmulatorScreen } from "../screens/EmulatorScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
+import { LicenseScreen } from "../screens/LicenseScreen";
 import type { RootStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -52,6 +53,11 @@ export function RootNavigator() {
         name="Settings"
         component={SettingsScreen}
         options={{ title: "Settings", orientation: "portrait_up" }}
+      />
+      <Stack.Screen
+        name="License"
+        component={LicenseScreen}
+        options={{ title: "License", orientation: "portrait_up" }}
       />
       <Stack.Screen
         name="Emulator"

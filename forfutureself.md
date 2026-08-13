@@ -1,6 +1,7 @@
 # to implement
 
-- settings (haptics, language, policy, license, version)
+- prebuild to apply scheme
+- language
 - customization (pad layout/opacity)
 
 # to fix

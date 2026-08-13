@@ -5,7 +5,8 @@
 Android-only Expo app emulating the Nintendo 3DS via the **Azahar** core (C++, to be integrated over JNI). See the root CLAUDE.md for monorepo-wide rules.
 
 - Android package: `com.aguspignal.threeds` · slug `threeds` · display name "3DS Emulator" (placeholder, changeable in `app.json`).
-- `App.tsx` is intentionally thin: it builds the `AppConfig` (console `3ds`, `core` + `EmulatorView` from `./modules/azahar-core`) and renders the shared `<AppRoot />` from `@emulators/ui`. App-specific UI belongs in the config or in `packages/ui` — don't add screens here.
+- `App.tsx` is intentionally thin: it builds the `AppConfig` (console `3ds`, `core` + `EmulatorView` from `./modules/azahar-core`, `licenseNotice` from `./license`) and renders the shared `<AppRoot />` from `@emulators/ui`. App-specific UI belongs in the config or in `packages/ui` — don't add screens here.
+- `license.ts` — the **GPL v2** notice for Azahar that Settings → Legal → License shows, mirroring `docs/legal/license/license-gpl-threeds.md`. Edit both together. v2, not v3 like the NDS app's: Azahar ships the GPLv2 text in its `license.txt`, inherited from Citra.
 - `modules/azahar-core/` — local Expo Module (Android/Kotlin only):
   - `android/.../AzaharCoreModule.kt` — stub of the `EmulatorCore` contract; every function is a no-op until Azahar is wired in via JNI.
   - `android/.../AzaharCoreView.kt` — stub `ExpoView`; will render both 3DS screens (top 400×240, bottom 320×240 touch screen — see `CONSOLES['3ds']`).

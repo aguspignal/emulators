@@ -5,7 +5,8 @@
 Android-only Expo app emulating the Nintendo DS via the **melonDS** core (C++, to be integrated over JNI). See the root CLAUDE.md for monorepo-wide rules.
 
 - Android package: `com.aguspignal.nds` · slug `nds` · display name "NDS Emulator" (placeholder, changeable in `app.json`).
-- `App.tsx` is intentionally thin: it builds the `AppConfig` (console `nds`, `core` + `EmulatorView` from `./modules/melonds-core`) and renders the shared `<AppRoot />` from `@emulators/ui`. App-specific UI belongs in the config or in `packages/ui` — don't add screens here.
+- `App.tsx` is intentionally thin: it builds the `AppConfig` (console `nds`, `core` + `EmulatorView` from `./modules/melonds-core`, `licenseNotice` from `./license`) and renders the shared `<AppRoot />` from `@emulators/ui`. App-specific UI belongs in the config or in `packages/ui` — don't add screens here.
+- `license.ts` — the GPL v3 notice for melonDS that Settings → Legal → License shows, mirroring `docs/legal/license/license-gpl-nds.md`. Edit both together.
 - `modules/melonds-core/` — local Expo Module (Android/Kotlin only):
   - `android/.../MelondsCoreModule.kt` — stub of the `EmulatorCore` contract; every function is a no-op until melonDS is wired in via JNI.
   - `android/.../MelondsCoreView.kt` — stub `ExpoView`; will render both DS screens (256×192 each, bottom one is the touch screen — see `CONSOLES.nds`).
