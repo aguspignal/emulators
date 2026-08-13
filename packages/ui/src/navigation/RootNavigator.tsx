@@ -1,9 +1,12 @@
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { colors } from '../theme';
-import { useAppConfig } from '../config';
-import { HomeScreen } from '../screens/HomeScreen';
-import { EmulatorScreen } from '../screens/EmulatorScreen';
-import type { RootStackParamList } from './types';
+import { Pressable, StyleSheet } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { colors, spacing } from "../theme";
+import { useAppConfig } from "../config";
+import { HomeScreen } from "../screens/HomeScreen";
+import { EmulatorScreen } from "../screens/EmulatorScreen";
+import { SettingsScreen } from "../screens/SettingsScreen";
+import type { RootStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -27,7 +30,28 @@ export function RootNavigator() {
       <Stack.Screen
         name="Home"
         component={HomeScreen}
-        options={{ title: appName, orientation: 'portrait_up' }}
+        // Declared here rather than through `navigation.setOptions` in the
+        // screen: the gear depends on nothing the screen holds.
+        options={({ navigation }) => ({
+          title: appName,
+          orientation: "portrait_up",
+          headerRight: () => (
+            <Pressable
+              onPress={() => navigation.navigate("Settings")}
+              hitSlop={spacing.sm}
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+              style={({ pressed }) => [styles.headerButton, pressed && styles.headerButtonDimmed]}
+            >
+              <Ionicons name="settings-sharp" size={22} color={colors.text} />
+            </Pressable>
+          ),
+        })}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: "Settings", orientation: "portrait_up" }}
       />
       <Stack.Screen
         name="Emulator"
@@ -36,8 +60,13 @@ export function RootNavigator() {
         // landscape or portrait (EmulatorScreen lays itself out for both) even
         // when the system rotation lock is on, which players who keep that lock
         // enabled would otherwise experience as a pad frozen the wrong way up.
-        options={{ headerShown: false, orientation: 'all' }}
+        options={{ headerShown: false, orientation: "all" }}
       />
     </Stack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  headerButton: { paddingHorizontal: spacing.sm },
+  headerButtonDimmed: { opacity: 0.5 },
+});

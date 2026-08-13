@@ -213,14 +213,79 @@ export function buildGamepadLayout({ area, buttons }: LayoutOptions): GamepadLay
   // cap binds in landscape and the fraction binds in portrait, which makes
   // editing the cap silently do nothing in portrait.
 
-  // --- Shoulders: top corners, clear of the cutout --------------------------
-  const shoulderWidth = Math.round(Math.min(usableHeight * 0.22, 64));
-  const shoulderHeight = Math.round(Math.min(usableHeight * 0.13, 36));
+  // --- Geometry -------------------------------------------------------------
+  // Nothing is placed until every size is known: the shoulders hang off the top
+  // of the D-pad / face cluster, and in portrait it is the Select row's height
+  // that stops them riding up into it.
+
+  const shoulderWidth = Math.round(Math.min(usableHeight * 0.22, 124));
+  const shoulderHeight = Math.round(Math.min(usableHeight * 0.13, 64));
+  // ZL/ZR sit just inboard of L/R.
+  const zGap = shoulderWidth + 12;
+
+  const faceSize = Math.round(Math.min(usableHeight * 0.2, 68));
+  const faceGap = Math.round(faceSize * 0.28);
+  // Cluster radius from its centre to a button centre.
+  const spread = faceSize / 2 + faceGap / 2;
+  const clusterCx = right - margin - faceSize - spread * 0.4;
+  const clusterCy = bottom - margin - faceSize / 2 - spread * 0.6;
+  // The diamond's top button sits a full radius up; the GB/GBA pair only 0.45.
+  const diamond = has("x") || has("y");
+  const faceTop = clusterCy - spread * (diamond ? 1 : 0.45) - faceSize / 2;
+
+  const face = (button: EmulatorButton, dx: number, dy: number): Rect => ({
+    x: Math.round(clusterCx + dx * spread - faceSize / 2),
+    y: Math.round(clusterCy + dy * spread - faceSize / 2),
+    width: faceSize,
+    height: faceSize,
+  });
+
+  const dpadSize = Math.round(Math.min(usableHeight * 0.5, 150));
+  const dpadVisual: Rect = {
+    x: left + margin,
+    y: bottom - margin - dpadSize,
+    width: dpadSize,
+    height: dpadSize,
+  };
+
+  const smallWidth = Math.round(Math.min(usableHeight * 0.22, 64));
+  const smallHeight = Math.round(Math.min(usableHeight * 0.1, 28));
+  const smallGap = 8;
+  const menuSize = Math.round(Math.min(usableHeight * 0.12, 36));
+  // The menu sits between Select and Start, so its gap has to clear both
+  // neighbours' hit slop as well: overlapping slop there would pause the game
+  // on a mistimed Start.
+  const menuGap = smallGap + HIT_SLOP * 2;
+  const rowHalfWidth = menuSize / 2 + menuGap + smallWidth;
+  // A landscape pad is wide enough to sit the Select/Menu/Start row between the
+  // D-pad and the face cluster along the bottom. A portrait band is not: there
+  // the row would collide with the D-pad, so it goes to the band's top edge —
+  // the far end of the pad from the thumbs, which is where the least-pressed
+  // buttons belong.
+  const rowFits =
+    centerX - rowHalfWidth > dpadVisual.x + dpadSize + smallGap &&
+    centerX + rowHalfWidth < clusterCx - spread - faceSize / 2 - smallGap;
+  const smallY = rowFits ? bottom - margin - smallHeight : top + margin;
+  // The menu is taller than the pills and centred on them, so it — not the
+  // pills — is the row's real bottom edge.
+  const rowBottom = smallY + Math.max(smallHeight, (smallHeight + menuSize) / 2);
+
+  // Shoulders ride just above whichever of the D-pad and the face cluster
+  // reaches highest, so they stay within a thumb's roll of the controls the
+  // hands are already on rather than stranded in the empty top corners. In
+  // portrait that lands them exactly where the Select row used to sit; the
+  // floor keeps them clear of the row that has since moved up there.
+  const shoulderMinY = rowFits ? top + margin : rowBottom + smallGap;
+  const shoulderY = Math.round(
+    Math.max(shoulderMinY, Math.min(dpadVisual.y, faceTop) - margin - shoulderHeight),
+  );
+
+  // --- Shoulders ------------------------------------------------------------
   if (has("l")) {
     regions.push(
       pill("l", {
         x: left + margin,
-        y: top + margin,
+        y: shoulderY,
         width: shoulderWidth,
         height: shoulderHeight,
       }),
@@ -230,19 +295,17 @@ export function buildGamepadLayout({ area, buttons }: LayoutOptions): GamepadLay
     regions.push(
       pill("r", {
         x: right - margin - shoulderWidth,
-        y: top + margin,
+        y: shoulderY,
         width: shoulderWidth,
         height: shoulderHeight,
       }),
     );
   }
-  // ZL/ZR sit just inboard of L/R.
-  const zGap = shoulderWidth + 12;
   if (has("zl")) {
     regions.push(
       pill("zl", {
         x: left + margin + zGap,
-        y: top + margin,
+        y: shoulderY,
         width: shoulderWidth,
         height: shoulderHeight,
       }),
@@ -252,7 +315,7 @@ export function buildGamepadLayout({ area, buttons }: LayoutOptions): GamepadLay
     regions.push(
       pill("zr", {
         x: right - margin - shoulderWidth - zGap,
-        y: top + margin,
+        y: shoulderY,
         width: shoulderWidth,
         height: shoulderHeight,
       }),
@@ -260,21 +323,7 @@ export function buildGamepadLayout({ area, buttons }: LayoutOptions): GamepadLay
   }
 
   // --- Face buttons: bottom right diamond -----------------------------------
-  const faceSize = Math.round(Math.min(usableHeight * 0.2, 68));
-  const faceGap = Math.round(faceSize * 0.28);
-  // Cluster radius from its centre to a button centre.
-  const spread = faceSize / 2 + faceGap / 2;
-  const clusterCx = right - margin - faceSize - spread * 0.4;
-  const clusterCy = bottom - margin - faceSize / 2 - spread * 0.6;
-
-  const face = (button: EmulatorButton, dx: number, dy: number): Rect => ({
-    x: Math.round(clusterCx + dx * spread - faceSize / 2),
-    y: Math.round(clusterCy + dy * spread - faceSize / 2),
-    width: faceSize,
-    height: faceSize,
-  });
-
-  if (has("x") || has("y")) {
+  if (diamond) {
     // Four-button diamond (NDS/3DS): X top, Y left, A right, B bottom.
     if (has("x")) regions.push(round("x", face("x", 0, -1)));
     if (has("y")) regions.push(round("y", face("y", -1, 0)));
@@ -286,34 +335,7 @@ export function buildGamepadLayout({ area, buttons }: LayoutOptions): GamepadLay
     if (has("a")) regions.push(round("a", face("a", 0.75, -0.45)));
   }
 
-  // --- D-pad geometry (pushed last, see below) ------------------------------
-  const dpadSize = Math.round(Math.min(usableHeight * 0.5, 150));
-  const dpadVisual: Rect = {
-    x: left + margin,
-    y: bottom - margin - dpadSize,
-    width: dpadSize,
-    height: dpadSize,
-  };
-
   // --- Select / Menu / Start: one centred row ------------------------------
-  const smallWidth = Math.round(Math.min(usableHeight * 0.22, 64));
-  const smallHeight = Math.round(Math.min(usableHeight * 0.1, 28));
-  const smallGap = 8;
-  const menuSize = Math.round(Math.min(usableHeight * 0.12, 36));
-  // The menu sits between Select and Start, so its gap has to clear both
-  // neighbours' hit slop as well: overlapping slop there would pause the game
-  // on a mistimed Start.
-  const menuGap = smallGap + HIT_SLOP * 2;
-  const rowHalfWidth = menuSize / 2 + menuGap + smallWidth;
-  // A landscape pad is wide enough to sit this row between the D-pad and the
-  // face cluster along the bottom. A portrait band is not: there the row would
-  // collide with the D-pad, so it moves up into the empty middle instead.
-  const rowFits =
-    centerX - rowHalfWidth > dpadVisual.x + dpadSize + smallGap &&
-    centerX + rowHalfWidth < clusterCx - spread - faceSize / 2 - smallGap;
-  const smallY = rowFits
-    ? bottom - margin - smallHeight
-    : Math.round(dpadVisual.y - margin - smallHeight);
   if (has("select")) {
     regions.push(
       pill("select", {

@@ -1,84 +1,124 @@
-import { useCallback, useLayoutEffect, useState } from 'react';
+import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
-  FlatList,
-  Pressable,
   RefreshControl,
+  SectionList,
   StyleSheet,
   Text,
-} from 'react-native';
-import { useSQLiteContext } from 'expo-sqlite';
+  View,
+  useWindowDimensions,
+} from "react-native";
+import { useSQLiteContext } from "expo-sqlite";
 import {
+  deleteCoversForRom,
   deleteRomFile,
   deleteRomRow,
   deleteSaveStatesForRom,
   deleteStateThumbsForRom,
   pickAndImportRom,
+  resetRomCover,
+  retryFailedCovers,
   romFileUri,
   setFavorite,
   type RomRow,
-} from '@emulators/storage';
-import { useAppConfig } from '../config';
-import { useRoms } from '../storage/useRoms';
-import { EmptyLibrary } from '../components/EmptyLibrary';
-import { ErrorState } from '../components/ErrorState';
-import { RomListItem } from '../components/RomListItem';
-import { colors, spacing, typography } from '../theme';
-import { showErrorAlert } from '../utils/errors';
-import type { RootScreenProps } from '../navigation/types';
+} from "@emulators/storage";
+import { useAppConfig } from "../config";
+import { useRoms } from "../storage/useRoms";
+import { useCoverSweep } from "../storage/useCoverSweep";
+import { EmptyLibrary } from "../components/EmptyLibrary";
+import { ErrorState } from "../components/ErrorState";
+import { PrimaryButton } from "../components/PrimaryButton";
+import { RomTile } from "../components/RomTile";
+import { chunkRows, posterGridLayout } from "../components/posterGrid";
+import { colors, spacing, typography } from "../theme";
+import { formatBytes, formatLastPlayed } from "../utils/format";
+import { showErrorAlert } from "../utils/errors";
+import type { RootScreenProps } from "../navigation/types";
+
+/**
+ * ROMs whose cover file failed to load this session. One reset attempt each
+ * is enough — a second would mean the re-fetch also produced a bad file, and
+ * retrying that in a loop is worse than a blank tile.
+ */
+const selfHealed = new Set<number>();
 
 /** The ROM library: list, import, favorite/delete, and boot-on-tap. */
-export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
+export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
   const { consoles, core } = useAppConfig();
   const db = useSQLiteContext();
   const { roms, loading, error, reload } = useRoms();
   const [importing, setImporting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const { width } = useWindowDimensions();
+  const grid = posterGridLayout(width);
+  const sweepCovers = useCoverSweep(reload);
+
+  // Favourites get their own section once there is one to show; "My games"
+  // is always titled, favourites or not.
+  const sections = useMemo<{ title: string; data: RomRow[][] }[]>(() => {
+    // No sections at all rather than one empty section: SectionList counts a
+    // section's header and footer as items, so an empty section would keep
+    // `ListEmptyComponent` from ever rendering.
+    if (roms.length === 0) return [];
+    const favorites = roms.filter((rom) => rom.favorite === 1);
+    const rest = roms.filter((rom) => rom.favorite !== 1);
+    return [
+      ...(favorites.length > 0
+        ? [{ title: "Favorites", data: chunkRows(favorites, grid.columns) }]
+        : []),
+      ...(rest.length > 0 ? [{ title: "My games", data: chunkRows(rest, grid.columns) }] : []),
+    ];
+  }, [roms, grid.columns]);
 
   const importRom = useCallback(async () => {
     if (importing) return;
     setImporting(true);
     try {
       const result = await pickAndImportRom(db, consoles);
-      if (result.status === 'imported') {
+      if (result.status === "imported") {
         await reload();
-      } else if (result.status === 'duplicate') {
-        Alert.alert('Already in library', `${result.displayName} is already in your library.`);
+        // Deliberately here rather than inside pickAndImportRom: that
+        // function's thrown errors are user-facing copy, and awaiting a
+        // network call in it would hang the import behind a captive portal.
+        sweepCovers();
+      } else if (result.status === "duplicate") {
+        Alert.alert("Already in library", `${result.displayName} is already in your library.`);
       }
     } catch (error) {
-      showErrorAlert('Import failed', error);
+      showErrorAlert("Import failed", error);
     } finally {
       setImporting(false);
     }
-  }, [db, consoles, reload, importing]);
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <Pressable onPress={importRom} disabled={importing} hitSlop={spacing.sm}>
-          <Text style={[styles.addButton, importing && styles.addButtonDimmed]}>+</Text>
-        </Pressable>
-      ),
-    });
-  }, [navigation, importRom, importing]);
+  }, [db, consoles, reload, importing, sweepCovers]);
 
   const openRom = useCallback(
     (rom: RomRow) => {
       try {
         // The absolute URI is derived at tap time, never persisted.
-        navigation.navigate('Emulator', { romId: rom.id, romUri: romFileUri(rom.file_name) });
+        navigation.navigate("Emulator", {
+          romId: rom.id,
+          romUri: romFileUri(rom.file_name),
+          romName: rom.display_name,
+        });
       } catch (error) {
         showErrorAlert("Couldn't open game", error);
       }
     },
-    [navigation]
+    [navigation],
   );
 
+  // Size and last-played lost their place in the move from row to tile, so
+  // the long-press alert — which passed no message before — carries them now.
   const showRomActions = useCallback(
     (rom: RomRow) => {
-      Alert.alert(rom.display_name, undefined, [
+      const subtitle = [
+        consoles.find((c) => c.id === rom.console_id)?.displayName ?? rom.console_id,
+        formatBytes(rom.size),
+        formatLastPlayed(rom.last_played_at),
+      ].join(" · ");
+      Alert.alert(rom.display_name, subtitle, [
         {
-          text: rom.favorite === 1 ? 'Unfavorite' : 'Favorite',
+          text: rom.favorite === 1 ? "Unfavorite" : "Favorite",
           onPress: () => {
             setFavorite(db, rom.id, rom.favorite !== 1)
               .then(() => reload())
@@ -86,8 +126,8 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
           },
         },
         {
-          text: 'Delete',
-          style: 'destructive',
+          text: "Delete",
+          style: "destructive",
           onPress: async () => {
             try {
               await deleteRomRow(db, rom.id);
@@ -104,38 +144,70 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
               deleteRomFile(rom.file_name);
               await deleteSaveStatesForRom(db, rom.id);
               deleteStateThumbsForRom(rom.id);
+              deleteCoversForRom(rom.id);
               if (rom.sha1) await core.deleteSaveData(rom.sha1);
             } catch (error) {
-              console.error('leftovers from deleted ROM:', error);
+              console.error("leftovers from deleted ROM:", error);
             }
             void reload();
           },
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
       ]);
     },
-    [db, core, reload]
+    [db, core, reload],
   );
 
-  const consoleName = useCallback(
-    (rom: RomRow) =>
-      consoles.find((c) => c.id === rom.console_id)?.displayName ?? rom.console_id,
-    [consoles]
+  const handleCoverMissing = useCallback(
+    (romId: number) => {
+      if (selfHealed.has(romId)) return;
+      selfHealed.add(romId);
+      // Deliberately no reload(): that re-renders the image, which fails
+      // again, which calls this again. The next sweep picks the row up.
+      resetRomCover(db, romId).catch((error: unknown) =>
+        console.warn("could not reset a broken cover:", error),
+      );
+    },
+    [db],
   );
 
   return (
-    <FlatList
-      data={roms}
-      keyExtractor={(rom) => String(rom.id)}
-      renderItem={({ item }) => (
-        <RomListItem
-          rom={item}
-          consoleName={consoleName(item)}
-          onPress={() => openRom(item)}
-          onLongPress={() => showRomActions(item)}
-        />
+    <SectionList
+      sections={sections}
+      // One item is a whole row of tiles, so the id of its first ROM
+      // identifies it and shifts with the row when the library changes.
+      keyExtractor={(row) => `row-${row[0]?.id ?? "empty"}`}
+      renderSectionHeader={({ section }) => (
+        <Text style={styles.sectionHeader}>{section.title}</Text>
       )}
-      contentContainerStyle={roms.length === 0 ? styles.emptyContainer : styles.listContainer}
+      // Tiles take their cover's own shape, so a row's items differ in
+      // height; top-aligning keeps the posters on one line rather than
+      // centring each against the tallest.
+      renderItem={({ item: row }) => (
+        <View style={[styles.row, { gap: grid.gap, marginBottom: grid.rowGap }]}>
+          {row.map((rom) => (
+            <RomTile
+              key={rom.id}
+              rom={rom}
+              width={grid.tileWidth}
+              onPress={() => openRom(rom)}
+              onLongPress={() => showRomActions(rom)}
+              onCoverMissing={handleCoverMissing}
+            />
+          ))}
+        </View>
+      )}
+      contentContainerStyle={roms.length === 0 ? styles.emptyContainer : { padding: grid.padding }}
+      // Only above a library that has something in it: the empty state carries
+      // its own add button, and SectionList renders both header and empty
+      // component, which would show two.
+      ListHeaderComponent={
+        roms.length === 0 ? null : (
+          <View style={styles.listHeader}>
+            <PrimaryButton label="Add ROM" onPress={importRom} disabled={importing} />
+          </View>
+        )
+      }
       ListEmptyComponent={
         loading ? null : error != null ? (
           <ErrorState
@@ -153,8 +225,14 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
           refreshing={refreshing}
           onRefresh={async () => {
             setRefreshing(true);
+            // Clears the backoff first, so a pull is also "try the covers
+            // that failed while I was offline, now".
+            await retryFailedCovers(db).catch((error: unknown) =>
+              console.warn("could not clear cover backoff:", error),
+            );
             await reload();
             setRefreshing(false);
+            sweepCovers();
           }}
           tintColor={colors.text}
         />
@@ -164,8 +242,12 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
 }
 
 const styles = StyleSheet.create({
-  listContainer: { paddingVertical: spacing.md },
   emptyContainer: { flexGrow: 1 },
-  addButton: { ...typography.title, color: colors.primary, paddingHorizontal: spacing.sm },
-  addButtonDimmed: { opacity: 0.4 },
+  row: { flexDirection: "row", alignItems: "flex-start" },
+  sectionHeader: {
+    ...typography.title,
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+  listHeader: { marginBottom: spacing.md },
 });

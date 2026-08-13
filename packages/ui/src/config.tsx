@@ -1,6 +1,7 @@
 import { createContext, useContext, type ComponentType, type ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import type { ConsoleSpec, EmulatorCore } from '@emulators/core-interface';
+import type { CoverIndex } from '@emulators/storage';
 
 export interface EmulatorViewProps {
   style?: StyleProp<ViewStyle>;
@@ -19,6 +20,13 @@ export interface AppConfig {
   core: EmulatorCore;
   /** The app's native view the core renders video into. */
   EmulatorView: ComponentType<EmulatorViewProps>;
+  /**
+   * Bundled MD5 -> canonical-name tables for cover lookup, one per console
+   * this app ships. Optional so an app can adopt covers independently, and
+   * so nothing breaks when one ships without them. Order does not matter —
+   * `resolveCoverName` searches all of them, the ROM's own console first.
+   */
+  coverIndexes?: CoverIndex[];
 }
 
 const AppConfigContext = createContext<AppConfig | null>(null);
