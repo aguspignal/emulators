@@ -28,6 +28,10 @@ Each sub-project has its own CLAUDE.md with specifics.
 - Video never crosses the JS bridge: each native module exposes a native view the core renders into directly. The `EmulatorCore` interface covers control, input, and persistence only.
 - Changing the contract in `packages/core-interface` requires updating all three Kotlin modules and their TS wrappers (`apps/*/modules/*/src/index.ts`) in the same change.
 
+## General rules
+
+- If more information is needed for an implementation or something is not specified, don't assume, ask questions instead.
+
 ## Tooling
 
 - npm workspaces (`apps/*`, `packages/*`). Always `npm install` from the **root**; use `npx expo install <pkg>` inside an app dir for SDK-compatible versions.

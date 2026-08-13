@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, StyleSheet, View } from 'react-native';
+import { AppState, BackHandler, StyleSheet, View } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useKeepAwake } from 'expo-keep-awake';
 import {
@@ -35,7 +35,7 @@ type MenuView = 'closed' | 'root' | 'save' | 'load';
 export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'>) {
   const { core, EmulatorView, consoles } = useAppConfig();
   const db = useSQLiteContext();
-  const { romId, romUri } = route.params;
+  const { romId, romUri, romName } = route.params;
   const [booted, setBooted] = useState<RomInfo | null>(null);
   const [menu, setMenu] = useState<MenuView>('closed');
   // Read from callbacks that must not be re-created (and re-subscribed) every
@@ -208,6 +208,19 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
     core.resume();
   }, [core]);
 
+  // While a menu layer is up, hardware back peels it instead of popping the
+  // screen. Registered only then, so with the menu closed back falls through
+  // to the navigation pop — and its `beforeRemove` auto-save — as usual.
+  useEffect(() => {
+    if (menu === 'closed') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (menu === 'save' || menu === 'load') setMenu('root');
+      else resumeGame();
+      return true;
+    });
+    return () => sub.remove();
+  }, [menu, resumeGame]);
+
   const reset = useCallback(() => {
     core.reset();
     setMenu('closed');
@@ -264,7 +277,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
       )}
       {booted && menu === 'root' && (
         <GameMenu
-          title={booted.title}
+          title={romName}
           onResume={resumeGame}
           onSaveState={() => setMenu('save')}
           onLoadState={() => setMenu('load')}

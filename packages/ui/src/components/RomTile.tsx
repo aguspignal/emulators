@@ -102,5 +102,6 @@ const styles = StyleSheet.create({
   title: {
     ...typography.body,
     color: colors.text,
+    marginLeft: spacing.xs,
   },
 });

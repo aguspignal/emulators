@@ -334,10 +334,6 @@ export async function ensureCover(
 }
 
 /**
- * One pass over the ROMs due for a cover. Returns how many rows changed, so
- * the caller can refresh the list once rather than per ROM.
- */
-/**
  * Measures covers downloaded before `cover_ratio` existed, straight from the
  * files on disk — no network. A cover whose file has gone gets the console
  * default written instead, so this converges rather than retrying forever;
