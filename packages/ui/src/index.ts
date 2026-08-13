@@ -1,5 +1,7 @@
 export { AppRoot } from './AppRoot';
 export { AppConfigProvider, useAppConfig } from './config';
+export { SettingsProvider, useSettings } from './settings/SettingsContext';
+export type { Settings } from './settings/SettingsContext';
 export type { AppConfig, EmulatorViewProps } from './config';
 export type { RootStackParamList, RootScreenProps } from './navigation/types';
 export { RootNavigator } from './navigation/RootNavigator';

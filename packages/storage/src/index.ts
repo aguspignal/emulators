@@ -25,6 +25,7 @@ export {
   deleteSaveStatesForRom,
 } from './saveStates';
 export type { SaveStateRow } from './saveStates';
+export { getSetting, setSetting } from './settings';
 export {
   romsDirectory,
   sanitizeFileName,

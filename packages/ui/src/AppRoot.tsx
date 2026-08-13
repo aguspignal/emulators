@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SQLiteProvider } from 'expo-sqlite';
 import { DATABASE_NAME, migrate } from '@emulators/storage';
 import { AppConfigProvider, type AppConfig } from './config';
+import { SettingsProvider } from './settings/SettingsContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ErrorState } from './components/ErrorState';
 import { RootNavigator } from './navigation/RootNavigator';
@@ -57,9 +58,11 @@ export function AppRoot({ config }: { config: AppConfig }) {
              never mount before useSQLiteContext() is safe. */
           <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrate} onError={onDbError}>
             <AppConfigProvider config={config}>
-              <NavigationContainer theme={navigationTheme}>
-                <RootNavigator />
-              </NavigationContainer>
+              <SettingsProvider>
+                <NavigationContainer theme={navigationTheme}>
+                  <RootNavigator />
+                </NavigationContainer>
+              </SettingsProvider>
             </AppConfigProvider>
           </SQLiteProvider>
         )}

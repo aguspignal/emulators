@@ -137,6 +137,17 @@ export async function migrate(db: SQLiteDatabase): Promise<void> {
     await db.execAsync(`ALTER TABLE roms ADD COLUMN cover_ratio REAL;`);
     version = 4;
   }
+  if (version < 5) {
+    // App settings as key-value strings (see settings.ts). A missing key means
+    // "never set", so code-side defaults apply without seeding rows here.
+    await db.execAsync(`
+      CREATE TABLE settings (
+        key   TEXT PRIMARY KEY NOT NULL,
+        value TEXT NOT NULL
+      );
+    `);
+    version = 5;
+  }
 
   // No index on roms, deliberately: the list query sorts by
   // COALESCE(last_played_at, added_at), which an index on the raw columns

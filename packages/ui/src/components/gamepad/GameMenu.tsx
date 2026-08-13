@@ -1,20 +1,24 @@
-import type { ComponentProps } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, typography } from '../../theme';
+import type { ComponentProps } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { colors, spacing, typography } from "../../theme";
 
 export interface GameMenuProps {
   title: string;
+  muted: boolean;
+  fastForward: boolean;
   onResume: () => void;
   onSaveState: () => void;
   onLoadState: () => void;
+  onToggleMute: () => void;
+  onToggleFastForward: () => void;
   onReset: () => void;
   onExit: () => void;
 }
 
 const notAvailable = () =>
-  Alert.alert('Not available yet', 'This feature is coming in a future update.');
+  Alert.alert("Not available yet", "This feature is coming in a future update.");
 
 /**
  * The in-game pause menu: a full-screen layer with the game's library name on
@@ -23,9 +27,13 @@ const notAvailable = () =>
  */
 export function GameMenu({
   title,
+  muted,
+  fastForward,
   onResume,
   onSaveState,
   onLoadState,
+  onToggleMute,
+  onToggleFastForward,
   onReset,
   onExit,
 }: GameMenuProps) {
@@ -33,9 +41,9 @@ export function GameMenu({
 
   // Resetting throws away everything since the last save; make sure it's meant.
   const confirmReset = () =>
-    Alert.alert('Reset game', 'Restart from the beginning? Unsaved progress will be lost.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Reset', style: 'destructive', onPress: onReset },
+    Alert.alert("Reset game", "Restart from the beginning? Unsaved progress will be lost.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Reset", style: "destructive", onPress: onReset },
     ]);
 
   return (
@@ -54,8 +62,18 @@ export function GameMenu({
           <MenuRow icon="play-outline" label="Resume" onPress={onResume} />
           <MenuRow icon="save-outline" label="Save" onPress={onSaveState} />
           <MenuRow icon="folder-open-outline" label="Load" onPress={onLoadState} />
-          <MenuRow icon="volume-mute-outline" label="Mute game" onPress={notAvailable} />
-          <MenuRow icon="speedometer-outline" label="Speed up the game" onPress={notAvailable} />
+          <MenuRow
+            icon="volume-mute-outline"
+            label="Mute game"
+            onPress={onToggleMute}
+            toggled={muted}
+          />
+          <MenuRow
+            icon="play-forward-outline"
+            label="Fast forward"
+            onPress={onToggleFastForward}
+            toggled={fastForward}
+          />
           <MenuRow icon="code-slash-outline" label="Cheat codes" onPress={notAvailable} />
           <MenuRow icon="refresh-outline" label="Reset game" onPress={confirmReset} danger />
           <MenuRow icon="exit-outline" label="Auto save and exit" onPress={onExit} />
@@ -70,27 +88,42 @@ function MenuRow({
   label,
   onPress,
   danger,
+  toggled,
 }: {
-  icon: ComponentProps<typeof Ionicons>['name'];
+  icon: ComponentProps<typeof Ionicons>["name"];
   label: string;
   onPress: () => void;
   danger?: boolean;
+  /** When set, the row is a toggle and shows a switch reflecting this value. */
+  toggled?: boolean;
 }) {
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole={toggled === undefined ? "button" : "switch"}
+      accessibilityState={toggled === undefined ? undefined : { checked: toggled }}
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
       <Ionicons name={icon} size={22} color={danger ? colors.danger : colors.text} />
       <Text style={[styles.rowLabel, danger && styles.rowLabelDanger]}>{label}</Text>
+      {toggled !== undefined && (
+        // The whole row is the pressable; the switch is display-only so a tap
+        // on it can't fire a second, competing handler.
+        <View pointerEvents="none" style={styles.rowSwitch}>
+          <Switch
+            value={toggled}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.text}
+          />
+        </View>
+      )}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -100,14 +133,14 @@ const styles = StyleSheet.create({
   // Capped so landscape doesn't stretch rows edge-to-edge across the wide axis.
   content: {
     flex: 1,
-    alignSelf: 'center',
-    width: '100%',
+    alignSelf: "center",
+    width: "100%",
     maxWidth: 420,
   },
   title: {
     ...typography.title,
     color: colors.text,
-    textAlign: 'center',
+    textAlign: "center",
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
   },
@@ -116,20 +149,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
-    paddingVertical: spacing.sm + spacing.xs,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
   },
   rowPressed: {
     opacity: 0.6,
   },
+  rowSwitch: {
+    marginLeft: "auto",
+  },
   rowLabel: {
     ...typography.body,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.text,
   },
   rowLabelDanger: {
