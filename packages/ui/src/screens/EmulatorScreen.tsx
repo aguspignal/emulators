@@ -1,43 +1,48 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, BackHandler, StyleSheet, View } from 'react-native';
-import { useSQLiteContext } from 'expo-sqlite';
-import { useKeepAwake } from 'expo-keep-awake';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState, BackHandler, StyleSheet, View } from "react-native";
+import { useSQLiteContext } from "expo-sqlite";
+import { useKeepAwake } from "expo-keep-awake";
 import {
   AUTO_SAVESTATE_SLOT,
   CONSOLES,
   type EmulatorSubscription,
   type RomInfo,
-} from '@emulators/core-interface';
+} from "@emulators/core-interface";
 import {
   applyRomInfo,
   deleteStateThumb,
   getSaveState,
   stateThumbUri,
   upsertSaveState,
-} from '@emulators/storage';
-import { useAppConfig } from '../config';
-import { colors } from '../theme';
-import { showErrorAlert } from '../utils/errors';
-import { GamepadOverlay } from '../components/gamepad/GamepadOverlay';
-import { GameMenu } from '../components/gamepad/GameMenu';
-import { SlotSheet } from '../components/gamepad/SlotSheet';
-import { useEmulatorLayout } from '../components/gamepad/useEmulatorLayout';
-import type { Rect } from '../components/gamepad/layout';
-import type { RootScreenProps } from '../navigation/types';
+} from "@emulators/storage";
+import { useAppConfig } from "../config";
+import { colors } from "../theme";
+import { showErrorAlert } from "../utils/errors";
+import { GamepadOverlay } from "../components/gamepad/GamepadOverlay";
+import { GameMenu } from "../components/gamepad/GameMenu";
+import { SlotSheet } from "../components/gamepad/SlotSheet";
+import { useEmulatorLayout } from "../components/gamepad/useEmulatorLayout";
+import type { Rect } from "../components/gamepad/layout";
+import type { RootScreenProps } from "../navigation/types";
 
 /** Which menu layer is up. The gamepad is suspended for all but 'closed'. */
-type MenuView = 'closed' | 'root' | 'save' | 'load';
+type MenuView = "closed" | "root" | "save" | "load";
+
+/** Emulation speed while the fast-forward toggle is on. */
+const FAST_FORWARD_SPEED = 1.75;
 
 /**
  * Hosts the app's native emulator view, the on-screen gamepad, the pause menu,
  * and the savestate slots.
  */
-export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'>) {
+export function EmulatorScreen({ route, navigation }: RootScreenProps<"Emulator">) {
   const { core, EmulatorView, consoles } = useAppConfig();
   const db = useSQLiteContext();
   const { romId, romUri, romName } = route.params;
   const [booted, setBooted] = useState<RomInfo | null>(null);
-  const [menu, setMenu] = useState<MenuView>('closed');
+  const [menu, setMenu] = useState<MenuView>("closed");
+  const [muted, setMuted] = useState(false);
+  const [fastForward, setFastForward] = useState(false);
   // Read from callbacks that must not be re-created (and re-subscribed) every
   // time the game boots.
   const bootedRef = useRef(false);
@@ -58,7 +63,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
           "Couldn't start game",
           error,
           "This game couldn't be started. The ROM file may be missing, corrupted, or unsupported.",
-          () => navigation.goBack()
+          () => navigation.goBack(),
         );
         return;
       }
@@ -67,12 +72,12 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
       // Subscribe only after boot: the core both emits 'error' and rejects
       // on the same loadRom failure, so an earlier subscription would
       // double-alert. Post-boot, the event covers mid-game errors.
-      errorSub = core.addListener('error', ({ message }) =>
+      errorSub = core.addListener("error", ({ message }) =>
         showErrorAlert(
-          'Emulator problem',
+          "Emulator problem",
           new Error(message),
-          'The emulator hit a problem. The game may not work correctly.'
-        )
+          "The emulator hit a problem. The game may not work correctly.",
+        ),
       );
 
       // Pick up where the last session left off. A state that won't load —
@@ -82,7 +87,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
         const auto = await getSaveState(db, romId, AUTO_SAVESTATE_SLOT);
         if (auto && !cancelled) await core.loadState(AUTO_SAVESTATE_SLOT);
       } catch (error) {
-        console.warn('auto-resume failed; starting fresh:', error);
+        console.warn("auto-resume failed; starting fresh:", error);
       }
       if (cancelled) return;
 
@@ -94,7 +99,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
       // records the ROM hash that names its save files.
       // Log-only: a failed DB write must never eject a running game.
       applyRomInfo(db, romId, info).catch((error: unknown) =>
-        console.error('applyRomInfo failed:', error)
+        console.error("applyRomInfo failed:", error),
       );
     };
     void boot();
@@ -103,7 +108,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
       cancelled = true;
       bootedRef.current = false;
       errorSub?.remove();
-      core.unloadRom().catch((error: unknown) => console.error('unloadRom failed:', error));
+      core.unloadRom().catch((error: unknown) => console.error("unloadRom failed:", error));
     };
   }, [core, db, romId, romUri, navigation]);
 
@@ -120,7 +125,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
         await core.captureScreenshot(stateThumbUri(romId, slot, savedAt));
       } catch (error) {
         // A slot with no preview is still a perfectly good savestate.
-        console.warn('savestate thumbnail failed:', error);
+        console.warn("savestate thumbnail failed:", error);
       }
       await upsertSaveState(db, romId, slot, savedAt);
       // Only after the row points at the new file, and never when the two
@@ -129,11 +134,11 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
         try {
           deleteStateThumb(romId, slot, stale.saved_at);
         } catch (error) {
-          console.error('old thumbnail left behind:', error);
+          console.error("old thumbnail left behind:", error);
         }
       }
     },
-    [core, db, romId]
+    [core, db, romId],
   );
 
   /** Writes the automatic slot — the state the next boot resumes from. */
@@ -147,7 +152,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
     } catch (error) {
       // Silent: the player asked to leave, not to save. They still have their
       // in-game save and any slot they wrote by hand.
-      console.error('auto-save failed:', error);
+      console.error("auto-save failed:", error);
     } finally {
       autoSaveInFlight.current = false;
     }
@@ -161,15 +166,15 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
   // thread — but both are idempotent, so whichever fires first wins.
   const resumeOnForeground = useRef(false);
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (next) => {
-      if (next === 'active') {
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") {
         if (resumeOnForeground.current) {
           resumeOnForeground.current = false;
           core.resume();
         }
         return;
       }
-      if (core.getState() === 'running') {
+      if (core.getState() === "running") {
         resumeOnForeground.current = true;
         core.pause();
       }
@@ -185,7 +190,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
   const exitHandled = useRef(false);
   useEffect(
     () =>
-      navigation.addListener('beforeRemove', (e) => {
+      navigation.addListener("beforeRemove", (e) => {
         // Nothing to save before the game booted (the failure alert pops the
         // screen itself), and the re-dispatched action must pass straight
         // through or the screen could never be left.
@@ -195,16 +200,29 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
         core.pause();
         void autoSave().finally(() => navigation.dispatch(e.data.action));
       }),
-    [navigation, core, autoSave]
+    [navigation, core, autoSave],
   );
+
+  // Applied on boot as well as on toggle: the native audio sink and frame
+  // pacing outlive the ROM, so a mute or fast-forward left on by the previous
+  // game would silently carry over into this one, where the menu shows both
+  // toggles as off.
+  useEffect(() => {
+    if (!booted) return;
+    core.setVolume(muted ? 0 : 1);
+  }, [core, booted, muted]);
+  useEffect(() => {
+    if (!booted) return;
+    core.setSpeed(fastForward ? FAST_FORWARD_SPEED : 1);
+  }, [core, booted, fastForward]);
 
   const openMenu = useCallback(() => {
     core.pause();
-    setMenu('root');
+    setMenu("root");
   }, [core]);
 
   const resumeGame = useCallback(() => {
-    setMenu('closed');
+    setMenu("closed");
     core.resume();
   }, [core]);
 
@@ -212,9 +230,9 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
   // screen. Registered only then, so with the menu closed back falls through
   // to the navigation pop — and its `beforeRemove` auto-save — as usual.
   useEffect(() => {
-    if (menu === 'closed') return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (menu === 'save' || menu === 'load') setMenu('root');
+    if (menu === "closed") return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (menu === "save" || menu === "load") setMenu("root");
       else resumeGame();
       return true;
     });
@@ -223,7 +241,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
 
   const reset = useCallback(() => {
     core.reset();
-    setMenu('closed');
+    setMenu("closed");
     core.resume();
   }, [core]);
 
@@ -238,7 +256,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
       }
       resumeGame();
     },
-    [core, recordState, resumeGame]
+    [core, recordState, resumeGame],
   );
 
   const loadFromSlot = useCallback(
@@ -251,7 +269,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
       }
       resumeGame();
     },
-    [core, resumeGame]
+    [core, resumeGame],
   );
 
   // The pad is laid out for the console the core actually detected from the
@@ -264,7 +282,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
 
   return (
     <View style={styles.container}>
-      {layout.orientation === 'portrait' && (
+      {layout.orientation === "portrait" && (
         // The band's own surface, so the pad's translucent buttons read against
         // something other than the letterboxing above them. Runs to the bottom
         // edge rather than stopping at the inset, which would strand a black
@@ -273,25 +291,29 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
       )}
       <EmulatorView style={absoluteRect(layout.screen)} />
       {booted && (
-        <GamepadOverlay layout={layout.pad} onMenu={openMenu} suspended={menu !== 'closed'} />
+        <GamepadOverlay layout={layout.pad} onMenu={openMenu} suspended={menu !== "closed"} />
       )}
-      {booted && menu === 'root' && (
+      {booted && menu === "root" && (
         <GameMenu
           title={romName}
+          muted={muted}
+          fastForward={fastForward}
           onResume={resumeGame}
-          onSaveState={() => setMenu('save')}
-          onLoadState={() => setMenu('load')}
+          onSaveState={() => setMenu("save")}
+          onLoadState={() => setMenu("load")}
+          onToggleMute={() => setMuted((m) => !m)}
+          onToggleFastForward={() => setFastForward((f) => !f)}
           onReset={reset}
           onExit={() => navigation.goBack()}
         />
       )}
-      {booted && (menu === 'save' || menu === 'load') && (
+      {booted && (menu === "save" || menu === "load") && (
         <SlotSheet
           mode={menu}
           romId={romId}
           spec={spec}
-          onPick={(slot) => void (menu === 'save' ? saveToSlot(slot) : loadFromSlot(slot))}
-          onBack={() => setMenu('root')}
+          onPick={(slot) => void (menu === "save" ? saveToSlot(slot) : loadFromSlot(slot))}
+          onBack={() => setMenu("root")}
         />
       )}
     </View>
@@ -300,7 +322,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<'Emulator'
 
 function absoluteRect(rect: Rect) {
   return {
-    position: 'absolute' as const,
+    position: "absolute" as const,
     left: rect.x,
     top: rect.y,
     width: rect.width,
@@ -309,9 +331,9 @@ function absoluteRect(rect: Rect) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: "#000" },
   padBand: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
