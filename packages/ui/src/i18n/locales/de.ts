@@ -16,6 +16,7 @@ export default {
     dbOpenMessage: 'Die Datenbank der App konnte nicht geöffnet werden.',
   },
   home: {
+    title: '{{consoles}}-Emulator',
     favorites: 'Favoriten',
     myGames: 'Meine Spiele',
     addRom: 'ROM hinzufügen',

@@ -6,12 +6,13 @@ import { useAppConfig } from "../config";
 import { LANGUAGES } from "../i18n";
 import { useSettings } from "../settings/SettingsContext";
 import { colors, radius, spacing, typography } from "../theme";
+import { openExternalLink } from "../utils/links";
 import type { RootScreenProps } from "../navigation/types";
 
 /** App settings, plus the About panel. */
 export function SettingsScreen({ navigation }: RootScreenProps<"Settings">) {
   const { t } = useTranslation();
-  const { consoles } = useAppConfig();
+  const { consoles, termsUrl, privacyUrl } = useAppConfig();
   const { hapticsEnabled, setHapticsEnabled, language } = useSettings();
 
   const activeLanguage =
@@ -47,8 +48,8 @@ export function SettingsScreen({ navigation }: RootScreenProps<"Settings">) {
       </View>
       <Text style={styles.sectionHeader}>{t("settings.legal")}</Text>
       <View style={styles.card}>
-        <BrowserRow label={t("settings.termsOfUse")} />
-        <BrowserRow label={t("settings.privacyPolicy")} />
+        <BrowserRow label={t("settings.termsOfUse")} url={termsUrl} />
+        <BrowserRow label={t("settings.privacyPolicy")} url={privacyUrl} />
         <NavRow label={t("settings.license")} onPress={() => navigation.navigate("License")} last />
       </View>
       <Text style={styles.note}>{t("settings.note")}</Text>
@@ -65,14 +66,33 @@ function Row({ label, value, last }: { label: string; value: string; last?: bool
   );
 }
 
-/** A row that will open a document in the browser. Inert until the legal
-    pages are deployed — then it becomes a Pressable around Linking.openURL. */
-function BrowserRow({ label, last }: { label: string; last?: boolean }) {
-  return (
-    <View style={[styles.row, styles.browserRow, !last && styles.rowDivided]}>
+/** A row that opens a document in the browser. Inert while its page isn't
+    deployed yet (no URL in the app's config). */
+function BrowserRow({ label, url, last }: { label: string; url?: string; last?: boolean }) {
+  const content = (
+    <>
       <Text style={styles.rowValue}>{label}</Text>
       <Ionicons name="open-outline" size={18} color={colors.textMuted} />
-    </View>
+    </>
+  );
+  if (!url) {
+    return (
+      <View style={[styles.row, styles.browserRow, !last && styles.rowDivided]}>{content}</View>
+    );
+  }
+  return (
+    <Pressable
+      accessibilityRole="link"
+      onPress={() => openExternalLink(url)}
+      style={({ pressed }) => [
+        styles.row,
+        styles.browserRow,
+        !last && styles.rowDivided,
+        pressed && styles.rowPressed,
+      ]}
+    >
+      {content}
+    </Pressable>
   );
 }
 

@@ -16,6 +16,7 @@ export default {
     dbOpenMessage: '앱 데이터베이스를 열지 못했습니다.',
   },
   home: {
+    title: '{{consoles}} 에뮬레이터',
     favorites: '즐겨찾기',
     myGames: '내 게임',
     addRom: 'ROM 추가',

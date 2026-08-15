@@ -1,3 +1,6 @@
+/releases/
+/assets/
+
 # dependencies
 node_modules/
 

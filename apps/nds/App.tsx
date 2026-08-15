@@ -7,7 +7,6 @@ import { SOURCE as NDS_COVERS } from './assets/covers/nds';
 import { LICENSE_NOTICE } from './license';
 
 const config: AppConfig = {
-  appName: 'NDS Emulator',
   consoles: [CONSOLES.nds],
   core,
   EmulatorView,

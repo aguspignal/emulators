@@ -1,8 +1,7 @@
-import { Linking, ScrollView, StyleSheet, Text } from "react-native";
+import { ScrollView, StyleSheet, Text } from "react-native";
 import { useAppConfig } from "../config";
-import i18n from "../i18n";
 import { colors, spacing, typography } from "../theme";
-import { showErrorAlert } from "../utils/errors";
+import { openExternalLink } from "../utils/links";
 
 /** Bare URLs in the notice — split on them so each becomes a tappable link. */
 const URL_PATTERN = /(https?:\/\/\S+)/;
@@ -49,10 +48,7 @@ function linkify(paragraph: string) {
 function openLink(url: string) {
   // Trailing punctuation reads as part of the URL to the regex but not to a
   // browser; strip it rather than complicate the pattern.
-  // Module-level function, so global i18n.t — evaluated at press time.
-  Linking.openURL(url.replace(/[.,;:)]+$/, "")).catch((e) =>
-    showErrorAlert(i18n.t("license.openLinkFailed"), e, i18n.t("license.openLinkMessage")),
-  );
+  openExternalLink(url.replace(/[.,;:)]+$/, ""));
 }
 
 const styles = StyleSheet.create({

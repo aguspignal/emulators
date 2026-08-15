@@ -12,9 +12,10 @@ export interface EmulatorViewProps {
  * these and hands it to <AppRoot />; all shared screens read it from context.
  */
 export interface AppConfig {
-  /** Display name shown in headers, e.g. "GBA Emulator". */
-  appName: string;
-  /** Console(s) this app emulates; the first entry drives screen layout. */
+  /**
+   * Console(s) this app emulates; the first entry drives screen layout, and
+   * the abbreviations compose the Home header title in array order.
+   */
   consoles: ConsoleSpec[];
   /** The app's native core module, implementing the shared contract. */
   core: EmulatorCore;
@@ -28,6 +29,13 @@ export interface AppConfig {
    * blank lines separate paragraphs and bare URLs become links.
    */
   licenseNotice: string;
+  /**
+   * URLs of this app's hosted Terms of Use and Privacy Policy pages, opened
+   * in the browser from Settings → Legal. Optional: until an app's pages are
+   * deployed, leave them unset and the rows render inert.
+   */
+  termsUrl?: string;
+  privacyUrl?: string;
   /**
    * Bundled MD5 -> canonical-name tables for cover lookup, one per console
    * this app ships. Optional so an app can adopt covers independently, and

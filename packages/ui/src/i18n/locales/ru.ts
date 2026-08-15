@@ -16,6 +16,7 @@ export default {
     dbOpenMessage: 'Не удалось открыть базу данных приложения.',
   },
   home: {
+    title: 'Эмулятор {{consoles}}',
     favorites: 'Избранное',
     myGames: 'Мои игры',
     addRom: 'Добавить ROM',

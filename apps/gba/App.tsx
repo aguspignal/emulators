@@ -11,11 +11,12 @@ import { SOURCE as GB_COVERS } from "./assets/covers/gb";
 import { LICENSE_NOTICE } from "./license";
 
 const config: AppConfig = {
-  appName: "GBA/GBC/GB Emulator",
   consoles: [CONSOLES.gba, CONSOLES.gbc, CONSOLES.gb],
   core,
   EmulatorView,
   licenseNotice: LICENSE_NOTICE,
+  termsUrl: "https://sites.google.com/view/gbaemulator-terms",
+  privacyUrl: "https://sites.google.com/view/gbaemulator-privacy",
   coverIndexes: [
     { console: "gba", source: GBA_COVERS },
     { console: "gbc", source: GBC_COVERS },

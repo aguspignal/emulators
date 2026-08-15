@@ -7,7 +7,6 @@ import { SOURCE as THREEDS_COVERS } from './assets/covers/3ds';
 import { LICENSE_NOTICE } from './license';
 
 const config: AppConfig = {
-  appName: '3DS Emulator',
   consoles: [CONSOLES['3ds']],
   core,
   EmulatorView,

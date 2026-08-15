@@ -8,6 +8,8 @@ export interface ScreenSpec {
 export interface ConsoleSpec {
   id: ConsoleId;
   displayName: string;
+  /** Short form composed into the Home header title, e.g. "GBA". Latin in every locale. */
+  abbreviation: string;
   /** Top-to-bottom list of screens. Single-screen consoles have one entry. */
   screens: ScreenSpec[];
   /** Index into `screens` of the touch screen, or null if none. */
@@ -31,6 +33,7 @@ export const CONSOLES: Record<ConsoleId, ConsoleSpec> = {
   gb: {
     id: 'gb',
     displayName: 'Game Boy',
+    abbreviation: 'GB',
     screens: [{ width: 160, height: 144 }],
     touchScreen: null,
     romExtensions: ['gb'],
@@ -39,6 +42,7 @@ export const CONSOLES: Record<ConsoleId, ConsoleSpec> = {
   gbc: {
     id: 'gbc',
     displayName: 'Game Boy Color',
+    abbreviation: 'GBC',
     screens: [{ width: 160, height: 144 }],
     touchScreen: null,
     romExtensions: ['gbc'],
@@ -47,6 +51,7 @@ export const CONSOLES: Record<ConsoleId, ConsoleSpec> = {
   gba: {
     id: 'gba',
     displayName: 'Game Boy Advance',
+    abbreviation: 'GBA',
     screens: [{ width: 240, height: 160 }],
     touchScreen: null,
     romExtensions: ['gba'],
@@ -55,6 +60,7 @@ export const CONSOLES: Record<ConsoleId, ConsoleSpec> = {
   nds: {
     id: 'nds',
     displayName: 'Nintendo DS',
+    abbreviation: 'NDS',
     screens: [
       { width: 256, height: 192 },
       { width: 256, height: 192 },
@@ -66,6 +72,7 @@ export const CONSOLES: Record<ConsoleId, ConsoleSpec> = {
   '3ds': {
     id: '3ds',
     displayName: 'Nintendo 3DS',
+    abbreviation: '3DS',
     screens: [
       { width: 400, height: 240 },
       { width: 320, height: 240 },

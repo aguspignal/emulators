@@ -16,6 +16,7 @@ export default {
     dbOpenMessage: '应用数据库打开失败。',
   },
   home: {
+    title: '{{consoles}} 模拟器',
     favorites: '收藏',
     myGames: '我的游戏',
     addRom: '添加 ROM',
