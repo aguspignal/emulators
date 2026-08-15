@@ -17,7 +17,7 @@ export function RootNavigator() {
   // Subscribes this component to language changes, so a pick in the language
   // screen retitles every header live.
   const { t } = useTranslation();
-  const { appName } = useAppConfig();
+  const { consoles } = useAppConfig();
 
   return (
     <Stack.Navigator
@@ -39,7 +39,9 @@ export function RootNavigator() {
         // Declared here rather than through `navigation.setOptions` in the
         // screen: the gear depends on nothing the screen holds.
         options={({ navigation }) => ({
-          title: appName,
+          title: t("home.title", {
+            consoles: consoles.map((spec) => spec.abbreviation).join("/"),
+          }),
           orientation: "portrait_up",
           headerRight: () => (
             <Pressable

@@ -16,6 +16,7 @@ export default {
     dbOpenMessage: 'O banco de dados do app não pôde ser aberto.',
   },
   home: {
+    title: 'Emulador de {{consoles}}',
     favorites: 'Favoritos',
     myGames: 'Meus jogos',
     addRom: 'Adicionar ROM',

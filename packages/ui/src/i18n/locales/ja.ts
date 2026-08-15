@@ -16,6 +16,7 @@ export default {
     dbOpenMessage: 'アプリのデータベースを開けませんでした。',
   },
   home: {
+    title: '{{consoles}}エミュレーター',
     favorites: 'お気に入り',
     myGames: 'マイゲーム',
     addRom: 'ROMを追加',

@@ -12,9 +12,10 @@ export interface EmulatorViewProps {
  * these and hands it to <AppRoot />; all shared screens read it from context.
  */
 export interface AppConfig {
-  /** Display name shown in headers, e.g. "GBA Emulator". */
-  appName: string;
-  /** Console(s) this app emulates; the first entry drives screen layout. */
+  /**
+   * Console(s) this app emulates; the first entry drives screen layout, and
+   * the abbreviations compose the Home header title in array order.
+   */
   consoles: ConsoleSpec[];
   /** The app's native core module, implementing the shared contract. */
   core: EmulatorCore;

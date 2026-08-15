@@ -11,7 +11,6 @@ import { SOURCE as GB_COVERS } from "./assets/covers/gb";
 import { LICENSE_NOTICE } from "./license";
 
 const config: AppConfig = {
-  appName: "GBA/GBC/GB Emulator",
   consoles: [CONSOLES.gba, CONSOLES.gbc, CONSOLES.gb],
   core,
   EmulatorView,
