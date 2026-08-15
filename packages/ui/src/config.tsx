@@ -30,6 +30,13 @@ export interface AppConfig {
    */
   licenseNotice: string;
   /**
+   * URLs of this app's hosted Terms of Use and Privacy Policy pages, opened
+   * in the browser from Settings → Legal. Optional: until an app's pages are
+   * deployed, leave them unset and the rows render inert.
+   */
+  termsUrl?: string;
+  privacyUrl?: string;
+  /**
    * Bundled MD5 -> canonical-name tables for cover lookup, one per console
    * this app ships. Optional so an app can adopt covers independently, and
    * so nothing breaks when one ships without them. Order does not matter —

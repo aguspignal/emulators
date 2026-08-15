@@ -15,6 +15,8 @@ const config: AppConfig = {
   core,
   EmulatorView,
   licenseNotice: LICENSE_NOTICE,
+  termsUrl: "https://sites.google.com/view/gbaemulator-terms",
+  privacyUrl: "https://sites.google.com/view/gbaemulator-privacy",
   coverIndexes: [
     { console: "gba", source: GBA_COVERS },
     { console: "gbc", source: GBC_COVERS },

@@ -4,20 +4,12 @@
     "slug": "gba",
     "scheme": "gba",
     "version": "1.0.0",
-    "platforms": [
-      "android"
-    ],
+    "platforms": ["android"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "android": {
       "package": "com.aguspignal.gba",
-      "adaptiveIcon": {
-        "backgroundColor": "#101014",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      },
       "predictiveBackGestureEnabled": false
     },
     "extra": {
@@ -28,7 +20,19 @@
     "owner": "aguspignal",
     "plugins": [
       "expo-sqlite",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1c1c22",
+          "image": "./assets/splash-icon.png",
+          "dark": {
+            "image": "./assets/splash-icon-dark.png",
+            "backgroundColor": "#1c1c22"
+          },
+          "imageWidth": 200
+        }
+      ]
     ]
   }
 }

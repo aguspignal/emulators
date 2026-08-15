@@ -1,5 +1,6 @@
 # to implement
 
+- icons
 - screnshots of homescreen
 - modals
 - customization (pad layout/opacity)
