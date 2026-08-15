@@ -1,40 +1,57 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { acceptedExtensions } from "@emulators/storage";
 import { useAppConfig } from "../config";
+import { LANGUAGES } from "../i18n";
 import { useSettings } from "../settings/SettingsContext";
 import { colors, radius, spacing, typography } from "../theme";
 import type { RootScreenProps } from "../navigation/types";
 
 /** App settings, plus the About panel. */
 export function SettingsScreen({ navigation }: RootScreenProps<"Settings">) {
-  const { appName, consoles } = useAppConfig();
-  const { hapticsEnabled, setHapticsEnabled } = useSettings();
+  const { t } = useTranslation();
+  const { consoles } = useAppConfig();
+  const { hapticsEnabled, setHapticsEnabled, language } = useSettings();
+
+  const activeLanguage =
+    language === "auto"
+      ? t("settings.automatic")
+      : (LANGUAGES.find((entry) => entry.code === language)?.endonym ?? language);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.sectionHeader}>Controls</Text>
+      <Text style={styles.sectionHeader}>{t("settings.general")}</Text>
+      <View style={styles.card}>
+        <NavRow
+          label={t("settings.language")}
+          value={activeLanguage}
+          onPress={() => navigation.navigate("Language")}
+          last
+        />
+      </View>
+      <Text style={styles.sectionHeader}>{t("settings.controls")}</Text>
       <View style={styles.card}>
         <SwitchRow
-          label="Button vibration"
-          description="Vibrate when pressing gamepad buttons"
+          label={t("settings.buttonVibration")}
+          description={t("settings.buttonVibrationDescription")}
           value={hapticsEnabled}
           onToggle={() => setHapticsEnabled(!hapticsEnabled)}
           last
         />
       </View>
-      <Text style={styles.sectionHeader}>About</Text>
+      <Text style={styles.sectionHeader}>{t("settings.about")}</Text>
       <View style={styles.card}>
-        <Row label="Consoles" value={consoles.map((c) => c.displayName).join(", ")} />
-        <Row label="Supported files" value={acceptedExtensions(consoles)} last />
+        <Row label={t("settings.consoles")} value={consoles.map((c) => c.displayName).join(", ")} />
+        <Row label={t("settings.supportedFiles")} value={acceptedExtensions(consoles)} last />
       </View>
-      <Text style={styles.sectionHeader}>Legal</Text>
+      <Text style={styles.sectionHeader}>{t("settings.legal")}</Text>
       <View style={styles.card}>
-        <BrowserRow label="Terms of Use" />
-        <BrowserRow label="Privacy Policy" />
-        <NavRow label="License" onPress={() => navigation.navigate("License")} last />
+        <BrowserRow label={t("settings.termsOfUse")} />
+        <BrowserRow label={t("settings.privacyPolicy")} />
+        <NavRow label={t("settings.license")} onPress={() => navigation.navigate("License")} last />
       </View>
-      <Text style={styles.note}>Controller mapping and pad customization will live here.</Text>
+      <Text style={styles.note}>{t("settings.note")}</Text>
     </ScrollView>
   );
 }
@@ -60,7 +77,18 @@ function BrowserRow({ label, last }: { label: string; last?: boolean }) {
 }
 
 /** A row that pushes another screen in this app — chevron, not open-outline. */
-function NavRow({ label, onPress, last }: { label: string; onPress: () => void; last?: boolean }) {
+function NavRow({
+  label,
+  value,
+  onPress,
+  last,
+}: {
+  label: string;
+  /** Current selection, shown muted beside the chevron. */
+  value?: string;
+  onPress: () => void;
+  last?: boolean;
+}) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -73,7 +101,14 @@ function NavRow({ label, onPress, last }: { label: string; onPress: () => void; 
       ]}
     >
       <Text style={styles.rowValue}>{label}</Text>
-      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      <View style={styles.navRowRight}>
+        {value != null && (
+          <Text style={styles.rowLabel} numberOfLines={1}>
+            {value}
+          </Text>
+        )}
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      </View>
     </Pressable>
   );
 }
@@ -139,6 +174,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing.md,
   },
+  navRowRight: { flexDirection: "row", alignItems: "center", gap: spacing.xs, flexShrink: 1 },
   switchRowText: { flex: 1, gap: spacing.xs },
   rowLabel: { ...typography.caption, color: colors.textMuted },
   rowValue: { ...typography.body, color: colors.text },

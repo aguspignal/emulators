@@ -1,7 +1,7 @@
 export { AppRoot } from './AppRoot';
 export { AppConfigProvider, useAppConfig } from './config';
 export { SettingsProvider, useSettings } from './settings/SettingsContext';
-export type { Settings } from './settings/SettingsContext';
+export type { Settings, LanguagePreference } from './settings/SettingsContext';
 export type { AppConfig, EmulatorViewProps } from './config';
 export type { RootStackParamList, RootScreenProps } from './navigation/types';
 export { RootNavigator } from './navigation/RootNavigator';
@@ -9,6 +9,7 @@ export { HomeScreen } from './screens/HomeScreen';
 export { EmulatorScreen } from './screens/EmulatorScreen';
 export { SettingsScreen } from './screens/SettingsScreen';
 export { LicenseScreen } from './screens/LicenseScreen';
+export { LanguageScreen } from './screens/LanguageScreen';
 export { RomTile } from './components/RomTile';
 export { posterGridLayout } from './components/posterGrid';
 export type { PosterGridLayout } from './components/posterGrid';

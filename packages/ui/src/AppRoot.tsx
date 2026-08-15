@@ -1,4 +1,8 @@
+// First import on purpose: initializes i18next (device language) before
+// anything in this tree renders or calls t().
+import './i18n';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -31,6 +35,7 @@ const navigationTheme = {
  *   }
  */
 export function AppRoot({ config }: { config: AppConfig }) {
+  const { t } = useTranslation();
   const [dbError, setDbError] = useState<unknown>(null);
   const onDbError = useCallback((error: Error) => {
     console.error('SQLite failed to open:', error);
@@ -47,9 +52,9 @@ export function AppRoot({ config }: { config: AppConfig }) {
           // a permanently blank app. "Try again" remounts it, which re-runs
           // the open + migrate.
           <ErrorState
-            title="Couldn't open your library"
-            message="The app's database failed to open."
-            actionLabel="Try again"
+            title={t('errors.dbOpenTitle')}
+            message={t('errors.dbOpenMessage')}
+            actionLabel={t('common.tryAgain')}
             onAction={() => setDbError(null)}
           />
         ) : (

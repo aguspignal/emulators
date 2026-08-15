@@ -8,6 +8,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useSQLiteContext } from "expo-sqlite";
 import {
   deleteCoversForRom,
@@ -44,6 +45,7 @@ const selfHealed = new Set<number>();
 
 /** The ROM library: list, import, favorite/delete, and boot-on-tap. */
 export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
+  const { t } = useTranslation();
   const { consoles, core } = useAppConfig();
   const db = useSQLiteContext();
   const { roms, loading, error, reload } = useRoms();
@@ -64,11 +66,14 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
     const rest = roms.filter((rom) => rom.favorite !== 1);
     return [
       ...(favorites.length > 0
-        ? [{ title: "Favorites", data: chunkRows(favorites, grid.columns) }]
+        ? [{ title: t("home.favorites"), data: chunkRows(favorites, grid.columns) }]
         : []),
-      ...(rest.length > 0 ? [{ title: "My games", data: chunkRows(rest, grid.columns) }] : []),
+      ...(rest.length > 0
+        ? [{ title: t("home.myGames"), data: chunkRows(rest, grid.columns) }]
+        : []),
     ];
-  }, [roms, grid.columns]);
+    // t's identity changes with the language — exactly the invalidation wanted.
+  }, [roms, grid.columns, t]);
 
   const importRom = useCallback(async () => {
     if (importing) return;
@@ -82,14 +87,17 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
         // network call in it would hang the import behind a captive portal.
         sweepCovers();
       } else if (result.status === "duplicate") {
-        Alert.alert("Already in library", `${result.displayName} is already in your library.`);
+        Alert.alert(
+          t("home.duplicateTitle"),
+          t("home.duplicateMessage", { name: result.displayName }),
+        );
       }
     } catch (error) {
-      showErrorAlert("Import failed", error);
+      showErrorAlert(t("home.importFailed"), error);
     } finally {
       setImporting(false);
     }
-  }, [db, consoles, reload, importing, sweepCovers]);
+  }, [db, consoles, reload, importing, sweepCovers, t]);
 
   const openRom = useCallback(
     (rom: RomRow) => {
@@ -101,10 +109,10 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
           romName: rom.display_name,
         });
       } catch (error) {
-        showErrorAlert("Couldn't open game", error);
+        showErrorAlert(t("home.openFailed"), error);
       }
     },
-    [navigation],
+    [navigation, t],
   );
 
   // Size and last-played lost their place in the move from row to tile, so
@@ -118,21 +126,21 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
       ].join(" · ");
       Alert.alert(rom.display_name, subtitle, [
         {
-          text: rom.favorite === 1 ? "Unfavorite" : "Favorite",
+          text: rom.favorite === 1 ? t("home.unfavorite") : t("home.favorite"),
           onPress: () => {
             setFavorite(db, rom.id, rom.favorite !== 1)
               .then(() => reload())
-              .catch((error: unknown) => showErrorAlert("Couldn't update favorite", error));
+              .catch((error: unknown) => showErrorAlert(t("home.updateFavoriteFailed"), error));
           },
         },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
               await deleteRomRow(db, rom.id);
             } catch (error) {
-              showErrorAlert("Couldn't delete game", error);
+              showErrorAlert(t("home.deleteFailed"), error);
               return;
             }
             // Row first, then everything it owned: failing below leaves only
@@ -152,10 +160,10 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
             void reload();
           },
         },
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
       ]);
     },
-    [db, core, reload],
+    [db, core, reload, t],
   );
 
   const handleCoverMissing = useCallback(
@@ -204,16 +212,16 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
       ListHeaderComponent={
         roms.length === 0 ? null : (
           <View style={styles.listHeader}>
-            <PrimaryButton label="Add ROM" onPress={importRom} disabled={importing} />
+            <PrimaryButton label={t("home.addRom")} onPress={importRom} disabled={importing} />
           </View>
         )
       }
       ListEmptyComponent={
         loading ? null : error != null ? (
           <ErrorState
-            title="Couldn't load your library"
-            message="Something went wrong reading your games."
-            actionLabel="Retry"
+            title={t("home.loadFailedTitle")}
+            message={t("home.loadFailedMessage")}
+            actionLabel={t("common.retry")}
             onAction={() => void reload()}
           />
         ) : (

@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { colors, spacing } from "../theme";
@@ -7,11 +8,15 @@ import { HomeScreen } from "../screens/HomeScreen";
 import { EmulatorScreen } from "../screens/EmulatorScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
 import { LicenseScreen } from "../screens/LicenseScreen";
+import { LanguageScreen } from "../screens/LanguageScreen";
 import type { RootStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
+  // Subscribes this component to language changes, so a pick in the language
+  // screen retitles every header live.
+  const { t } = useTranslation();
   const { appName } = useAppConfig();
 
   return (
@@ -41,7 +46,7 @@ export function RootNavigator() {
               onPress={() => navigation.navigate("Settings")}
               hitSlop={spacing.sm}
               accessibilityRole="button"
-              accessibilityLabel="Settings"
+              accessibilityLabel={t("settings.title")}
               style={({ pressed }) => [styles.headerButton, pressed && styles.headerButtonDimmed]}
             >
               <Ionicons name="settings-sharp" size={22} color={colors.text} />
@@ -52,12 +57,17 @@ export function RootNavigator() {
       <Stack.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{ title: "Settings", orientation: "portrait_up" }}
+        options={{ title: t("settings.title"), orientation: "portrait_up" }}
+      />
+      <Stack.Screen
+        name="Language"
+        component={LanguageScreen}
+        options={{ title: t("settings.language"), orientation: "portrait_up" }}
       />
       <Stack.Screen
         name="License"
         component={LicenseScreen}
-        options={{ title: "License", orientation: "portrait_up" }}
+        options={{ title: t("settings.license"), orientation: "portrait_up" }}
       />
       <Stack.Screen
         name="Emulator"

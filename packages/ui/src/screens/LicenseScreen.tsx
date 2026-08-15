@@ -1,5 +1,6 @@
 import { Linking, ScrollView, StyleSheet, Text } from "react-native";
 import { useAppConfig } from "../config";
+import i18n from "../i18n";
 import { colors, spacing, typography } from "../theme";
 import { showErrorAlert } from "../utils/errors";
 
@@ -48,8 +49,9 @@ function linkify(paragraph: string) {
 function openLink(url: string) {
   // Trailing punctuation reads as part of the URL to the regex but not to a
   // browser; strip it rather than complicate the pattern.
+  // Module-level function, so global i18n.t — evaluated at press time.
   Linking.openURL(url.replace(/[.,;:)]+$/, "")).catch((e) =>
-    showErrorAlert("Couldn't open link", e, "No app on this device can open that address."),
+    showErrorAlert(i18n.t("license.openLinkFailed"), e, i18n.t("license.openLinkMessage")),
   );
 }
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSQLiteContext } from 'expo-sqlite';
 import {
   AUTO_SAVESTATE_SLOT,
@@ -44,6 +45,7 @@ const USER_SLOTS = Array.from({ length: SAVESTATE_SLOTS - 1 }, (_, index) => ind
  * layer, so the gamepad below is already suspended and plain `Pressable`s work.
  */
 export function SlotSheet({ mode, romId, spec, onPick, onBack }: SlotSheetProps) {
+  const { t } = useTranslation();
   const { core } = useAppConfig();
   const db = useSQLiteContext();
   const [saved, setSaved] = useState<SaveStateRow[] | null>(null);
@@ -68,34 +70,34 @@ export function SlotSheet({ mode, romId, spec, onPick, onBack }: SlotSheetProps)
       if (mode === 'save' && entry.saved) {
         Alert.alert(
           entry.label,
-          `This slot has a state from ${formatRelativeTime(entry.saved.saved_at).toLowerCase()}. Overwrite it?`,
+          t('slots.overwriteMessage', { time: formatRelativeTime(entry.saved.saved_at) }),
           [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Overwrite', style: 'destructive', onPress: () => onPick(entry.slot) },
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('slots.overwrite'), style: 'destructive', onPress: () => onPick(entry.slot) },
           ]
         );
         return;
       }
       onPick(entry.slot);
     },
-    [mode, onPick]
+    [mode, onPick, t]
   );
 
   const confirmDelete = useCallback(
     (entry: SlotEntry) => {
       const row = entry.saved;
       if (!row) return;
-      Alert.alert(entry.label, 'Delete this savestate?', [
-        { text: 'Cancel', style: 'cancel' },
+      Alert.alert(entry.label, t('slots.deleteMessage'), [
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await core.deleteState(entry.slot);
               await deleteSaveState(db, romId, entry.slot);
             } catch (error) {
-              showErrorAlert("Couldn't delete state", error);
+              showErrorAlert(t('slots.deleteFailed'), error);
               return;
             }
             try {
@@ -108,7 +110,7 @@ export function SlotSheet({ mode, romId, spec, onPick, onBack }: SlotSheetProps)
         },
       ]);
     },
-    [core, db, romId, reload]
+    [core, db, romId, reload, t]
   );
 
   const loaded = saved !== null;
@@ -118,10 +120,10 @@ export function SlotSheet({ mode, romId, spec, onPick, onBack }: SlotSheetProps)
   // Offered to load from, never to save into: the automatic slot belongs to the
   // exit/background save, which overwrites it without asking.
   if (mode === 'load' && auto) {
-    entries.push({ slot: AUTO_SAVESTATE_SLOT, label: 'Auto', saved: auto });
+    entries.push({ slot: AUTO_SAVESTATE_SLOT, label: t('slots.auto'), saved: auto });
   }
   for (const slot of USER_SLOTS) {
-    entries.push({ slot, label: `Slot ${slot}`, saved: bySlot.get(slot) ?? null });
+    entries.push({ slot, label: t('slots.slot', { number: slot }), saved: bySlot.get(slot) ?? null });
   }
 
   const thumbWidth = Math.round(THUMB_HEIGHT * thumbAspect(spec));
@@ -130,7 +132,7 @@ export function SlotSheet({ mode, romId, spec, onPick, onBack }: SlotSheetProps)
   return (
     <Pressable style={styles.scrim} onPress={onBack}>
       <Pressable style={styles.card} onPress={() => {}}>
-        <Text style={styles.title}>{mode === 'save' ? 'Save state' : 'Load state'}</Text>
+        <Text style={styles.title}>{mode === 'save' ? t('slots.saveTitle') : t('slots.loadTitle')}</Text>
         <FlatList
           data={entries}
           style={styles.list}
@@ -162,15 +164,19 @@ export function SlotSheet({ mode, romId, spec, onPick, onBack }: SlotSheetProps)
                 <View style={styles.rowText}>
                   <Text style={styles.rowLabel}>{item.label}</Text>
                   <Text style={styles.rowMeta}>
-                    {!loaded ? '' : item.saved ? formatRelativeTime(item.saved.saved_at) : 'Empty'}
+                    {!loaded
+                      ? ''
+                      : item.saved
+                        ? formatRelativeTime(item.saved.saved_at)
+                        : t('slots.empty')}
                   </Text>
                 </View>
               </Pressable>
             );
           }}
         />
-        {anySaved && <Text style={styles.hint}>Hold a slot to delete it</Text>}
-        <SecondaryButton label="Back" onPress={onBack} />
+        {anySaved && <Text style={styles.hint}>{t('slots.holdToDelete')}</Text>}
+        <SecondaryButton label={t('common.back')} onPress={onBack} />
       </Pressable>
     </Pressable>
   );

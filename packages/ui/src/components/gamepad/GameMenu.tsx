@@ -1,7 +1,9 @@
 import type { ComponentProps } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import i18n from "../../i18n";
 import { colors, spacing, typography } from "../../theme";
 
 export interface GameMenuProps {
@@ -17,8 +19,9 @@ export interface GameMenuProps {
   onExit: () => void;
 }
 
+// Module-level, so global i18n.t — evaluated at press time, always current.
 const notAvailable = () =>
-  Alert.alert("Not available yet", "This feature is coming in a future update.");
+  Alert.alert(i18n.t("gameMenu.notAvailableTitle"), i18n.t("gameMenu.notAvailableMessage"));
 
 /**
  * The in-game pause menu: a full-screen layer with the game's library name on
@@ -37,13 +40,14 @@ export function GameMenu({
   onReset,
   onExit,
 }: GameMenuProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   // Resetting throws away everything since the last save; make sure it's meant.
   const confirmReset = () =>
-    Alert.alert("Reset game", "Restart from the beginning? Unsaved progress will be lost.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Reset", style: "destructive", onPress: onReset },
+    Alert.alert(t("gameMenu.reset"), t("gameMenu.resetConfirmMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("gameMenu.resetAction"), style: "destructive", onPress: onReset },
     ]);
 
   return (
@@ -59,24 +63,24 @@ export function GameMenu({
         </Text>
         <View style={styles.divider} />
         <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + spacing.lg }}>
-          <MenuRow icon="play-outline" label="Resume" onPress={onResume} />
-          <MenuRow icon="save-outline" label="Save" onPress={onSaveState} />
-          <MenuRow icon="folder-open-outline" label="Load" onPress={onLoadState} />
+          <MenuRow icon="play-outline" label={t("gameMenu.resume")} onPress={onResume} />
+          <MenuRow icon="save-outline" label={t("gameMenu.save")} onPress={onSaveState} />
+          <MenuRow icon="folder-open-outline" label={t("gameMenu.load")} onPress={onLoadState} />
           <MenuRow
             icon="volume-mute-outline"
-            label="Mute game"
+            label={t("gameMenu.mute")}
             onPress={onToggleMute}
             toggled={muted}
           />
           <MenuRow
             icon="play-forward-outline"
-            label="Fast forward"
+            label={t("gameMenu.fastForward")}
             onPress={onToggleFastForward}
             toggled={fastForward}
           />
-          <MenuRow icon="code-slash-outline" label="Cheat codes" onPress={notAvailable} />
-          <MenuRow icon="refresh-outline" label="Reset game" onPress={confirmReset} danger />
-          <MenuRow icon="exit-outline" label="Auto save and exit" onPress={onExit} />
+          <MenuRow icon="code-slash-outline" label={t("gameMenu.cheats")} onPress={notAvailable} />
+          <MenuRow icon="refresh-outline" label={t("gameMenu.reset")} onPress={confirmReset} danger />
+          <MenuRow icon="exit-outline" label={t("gameMenu.exit")} onPress={onExit} />
         </ScrollView>
       </View>
     </View>
