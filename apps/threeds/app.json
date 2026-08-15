@@ -20,7 +20,8 @@
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-localization"
     ]
   }
 }

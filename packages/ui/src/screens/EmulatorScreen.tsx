@@ -16,6 +16,10 @@ import {
   upsertSaveState,
 } from "@emulators/storage";
 import { useAppConfig } from "../config";
+// Global i18n.t on purpose, throughout this file: useTranslation()'s t would
+// change identity on a language switch, and through the callback deps that
+// would re-run the boot effect — unloading and rebooting the running game.
+import i18n from "../i18n";
 import { colors } from "../theme";
 import { showErrorAlert } from "../utils/errors";
 import { GamepadOverlay } from "../components/gamepad/GamepadOverlay";
@@ -60,9 +64,9 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<"Emulator"
       } catch (error) {
         if (cancelled) return;
         showErrorAlert(
-          "Couldn't start game",
+          i18n.t("emulator.bootFailedTitle"),
           error,
-          "This game couldn't be started. The ROM file may be missing, corrupted, or unsupported.",
+          i18n.t("emulator.bootFailedMessage"),
           () => navigation.goBack(),
         );
         return;
@@ -74,9 +78,9 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<"Emulator"
       // double-alert. Post-boot, the event covers mid-game errors.
       errorSub = core.addListener("error", ({ message }) =>
         showErrorAlert(
-          "Emulator problem",
+          i18n.t("emulator.problemTitle"),
           new Error(message),
-          "The emulator hit a problem. The game may not work correctly.",
+          i18n.t("emulator.problemMessage"),
         ),
       );
 
@@ -251,7 +255,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<"Emulator"
         await core.saveState(slot);
         await recordState(slot);
       } catch (error) {
-        showErrorAlert("Couldn't save state", error);
+        showErrorAlert(i18n.t("emulator.saveFailed"), error);
         return; // stay in the sheet so the slot can be tried again
       }
       resumeGame();
@@ -264,7 +268,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<"Emulator"
       try {
         await core.loadState(slot);
       } catch (error) {
-        showErrorAlert("Couldn't load state", error);
+        showErrorAlert(i18n.t("emulator.loadFailed"), error);
         return;
       }
       resumeGame();

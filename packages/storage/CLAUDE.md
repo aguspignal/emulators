@@ -14,7 +14,7 @@ SQLite-backed ROM library (schema, queries, import flow) plus the on-disk ROM fi
 - `src/coverIndex.ts` — the bundled MD5→canonical-name tables (`CoverIndex`), parsed lazily into lookup maps and memoized per index object.
 - `src/covers.ts` — cover art: libretro system folders, URL building, the offline resolver, `ensureCover` (one ROM), `sweepCovers` (a bounded batch). **The only networking in the repo.**
 - `src/ndsBanner.ts` / `src/png.ts` — the DS cartridge icon fallback: a random-access banner read and a minimal uncompressed-PNG encoder. See `docs/covers_plan.md`.
-- `src/import.ts` — `pickAndImportRom`: pick → dedup by MD5 → copy into `Paths.document/roms/`. User-attributable failures throw `RomImportError`, whose `message` is user-facing copy — `@emulators/ui`'s `showErrorAlert` shows it verbatim and replaces every other error with generic text.
+- `src/import.ts` — `pickAndImportRom`: pick → dedup by MD5 → copy into `Paths.document/roms/`. User-attributable failures throw `RomImportError`, which carries a stable `code` (`unsupported_file` / `unreadable_file` / `no_space`) plus interpolation `params` — `@emulators/ui`'s `showErrorAlert` maps those to localized copy (this package stays i18n-free), keeps the English `message` for logs, and replaces every other error with generic text. The codes double as `import.*` catalog keys over there, so adding one means adding its translations.
 
 ## Invariants
 

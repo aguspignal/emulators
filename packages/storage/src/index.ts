@@ -48,7 +48,7 @@ export {
   sweepPartialCovers,
 } from './files';
 export { pickAndImportRom, RomImportError } from './import';
-export type { RomImportResult } from './import';
+export type { RomImportResult, RomImportErrorCode } from './import';
 export { lookupByMd5, lookupByNormalizedTitle, normalizeTitle } from './coverIndex';
 export type { CoverIndex } from './coverIndex';
 export {

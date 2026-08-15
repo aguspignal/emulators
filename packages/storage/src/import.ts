@@ -13,9 +13,18 @@ import {
 } from './files';
 import { findRomByMd5, insertRom } from './roms';
 
+export type RomImportErrorCode = 'unsupported_file' | 'unreadable_file' | 'no_space';
+
 /** A user-facing import failure; the message is safe to show in an alert. */
 export class RomImportError extends Error {
-  constructor(message: string) {
+  constructor(
+    /** Stable failure kind; `@emulators/ui` maps it to localized copy. */
+    readonly code: RomImportErrorCode,
+    /** Values the localized message interpolates. */
+    readonly params: { name: string; extensions?: string },
+    /** English fallback — logs, and any consumer that doesn't translate. */
+    message: string
+  ) {
     super(message);
     this.name = 'RomImportError';
   }
@@ -51,6 +60,8 @@ export async function pickAndImportRom(
   const spec = consoleForExtension(consoles, extension);
   if (!spec) {
     throw new RomImportError(
+      'unsupported_file',
+      { name: asset.name, extensions: acceptedExtensions(consoles) },
       `"${asset.name}" isn't a supported ROM. Expected: ${acceptedExtensions(consoles)}`
     );
   }
@@ -60,7 +71,13 @@ export async function pickAndImportRom(
   // Dedup BEFORE copying: hashing streams the source, it never writes.
   // Catches the same ROM re-picked from another folder or under another name.
   const md5 = source.md5; // string | null — the native getter swallows read errors
-  if (!md5) throw new RomImportError(`Couldn't read "${asset.name}".`);
+  if (!md5) {
+    throw new RomImportError(
+      'unreadable_file',
+      { name: asset.name },
+      `Couldn't read "${asset.name}".`
+    );
+  }
   const existing = await findRomByMd5(db, md5);
   if (existing) {
     return { status: 'duplicate', id: existing.id, displayName: existing.display_name };
@@ -68,7 +85,11 @@ export async function pickAndImportRom(
 
   const size = asset.size ?? source.size ?? 0;
   if (size > Paths.availableDiskSpace) {
-    throw new RomImportError(`Not enough free space to import "${asset.name}".`);
+    throw new RomImportError(
+      'no_space',
+      { name: asset.name },
+      `Not enough free space to import "${asset.name}".`
+    );
   }
 
   const dir = romsDirectory();

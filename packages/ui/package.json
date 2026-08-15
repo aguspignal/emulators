@@ -17,8 +17,12 @@
     "@react-navigation/native-stack": ">=7",
     "expo-haptics": "*",
     "expo-keep-awake": "*",
+    "expo-localization": "*",
     "expo-sqlite": "*",
+    "i18next": ">=26.2.0",
+    "intl-pluralrules": "*",
     "react": "*",
+    "react-i18next": ">=17",
     "react-native": "*",
     "react-native-safe-area-context": "*",
     "react-native-screens": "*"
