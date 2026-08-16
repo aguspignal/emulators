@@ -1,14 +1,12 @@
 # to implement
 
 - modals
-- customization (pad layout/opacity)
+- controls customization (layout/opacity)
+- customaziable app icon
 
 # to fix
 
 - deofuscation
+- import touching file
 
 # to test
-
-- font (tourney)
-- import touching file
-- import from folder

@@ -68,6 +68,25 @@ export default {
     license: '许可证',
     note: '手柄映射和按键自定义将在这里提供。',
   },
+  help: {
+    title: '帮助',
+    intro: '本应用不含任何游戏。ROM 文件需要你从设备中自行添加。',
+    stepsTitle: '导入 ROM',
+    step1Title: '把文件放到手机上',
+    step1Body:
+      '将 ROM 文件复制或下载到内部存储或 SD 卡。支持的文件：{{extensions}}。.zip 等压缩包需要先解压。',
+    step2Title: '导入你的 ROM',
+    step2Body: '有三种方式：',
+    step2OptionFile: '在游戏库界面点按“{{add}}”，再选择“{{file}}”导入单个游戏。',
+    step2OptionFolder: '点按“{{add}}”，再选择“{{folder}}”导入某个文件夹及其子文件夹中的全部 ROM。',
+    step2OptionOpenWith:
+      '在文件管理器或下载列表中点按 ROM 文件，在“打开方式”列表中选择本应用，文件会被导入并立即启动。',
+    step3Title: '开始游戏',
+    step3Body: '点按游戏库中的游戏即可启动。长按可将其收藏或删除。',
+    tipsTitle: '小提示',
+    tip1: '导入时会把文件复制到应用内，之后原文件可以移动或删除。',
+    tip2: '删除游戏时，其存档和即时存档也会一并删除。',
+  },
   emulator: {
     bootFailedTitle: '无法启动游戏',
     bootFailedMessage: '无法启动此游戏。ROM 文件可能缺失、损坏或不受支持。',

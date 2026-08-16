@@ -78,6 +78,26 @@ export default {
     license: 'License',
     note: 'Controller mapping and pad customization will live here.',
   },
+  help: {
+    title: 'Help',
+    intro: 'This app ships with no games. You add your own ROM files from your device.',
+    stepsTitle: 'Importing ROMs',
+    step1Title: 'Get the files onto your phone',
+    step1Body:
+      'Copy or download your ROM files to internal storage or an SD card. Supported files: {{extensions}}. Archives such as .zip have to be extracted first.',
+    step2Title: 'Import your ROMs',
+    step2Body: 'Three ways to do it:',
+    step2OptionFile: 'Tap "{{add}}" on the library screen, then "{{file}}" for a single game.',
+    step2OptionFolder:
+      'Tap "{{add}}", then "{{folder}}" to import every ROM in a folder and its subfolders.',
+    step2OptionOpenWith:
+      'Tap a ROM file in a file manager or in your downloads and pick this app from the "Open with" list — it is imported and starts right away.',
+    step3Title: 'Play',
+    step3Body: 'Tap a game in the library to start it. Hold it to favorite or delete it.',
+    tipsTitle: 'Good to know',
+    tip1: 'Importing copies the file into the app, so the original can be moved or deleted afterwards.',
+    tip2: 'Deleting a game also deletes its save file and its savestates.',
+  },
   emulator: {
     bootFailedTitle: "Couldn't start game",
     bootFailedMessage:

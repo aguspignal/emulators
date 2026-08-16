@@ -74,6 +74,29 @@ export default {
     license: 'Licence',
     note: 'Le mappage des manettes et la personnalisation du pad arriveront ici.',
   },
+  help: {
+    title: 'Aide',
+    intro:
+      "L'application ne contient aucun jeu. Vous ajoutez vos propres fichiers ROM depuis votre appareil.",
+    stepsTitle: 'Importer des ROMs',
+    step1Title: 'Mettre les fichiers sur le téléphone',
+    step1Body:
+      'Copiez ou téléchargez vos fichiers ROM dans la mémoire interne ou sur une carte SD. Fichiers pris en charge : {{extensions}}. Les archives comme .zip doivent être extraites au préalable.',
+    step2Title: 'Importez vos ROMs',
+    step2Body: 'Trois façons de le faire :',
+    step2OptionFile:
+      "Appuyez sur « {{add}} » sur l'écran de la bibliothèque, puis sur « {{file}} » pour un seul jeu.",
+    step2OptionFolder:
+      "Appuyez sur « {{add}} », puis sur « {{folder}} » pour importer toutes les ROMs d'un dossier et de ses sous-dossiers.",
+    step2OptionOpenWith:
+      'Appuyez sur un fichier ROM dans un gestionnaire de fichiers ou dans vos téléchargements et choisissez cette application dans la liste « Ouvrir avec » : elle est importée et démarre aussitôt.',
+    step3Title: 'Jouer',
+    step3Body:
+      'Appuyez sur un jeu de la bibliothèque pour le lancer. Maintenez-le pour le mettre en favori ou le supprimer.',
+    tipsTitle: 'Bon à savoir',
+    tip1: "L'import copie le fichier dans l'application : l'original peut ensuite être déplacé ou supprimé.",
+    tip2: 'Supprimer un jeu supprime aussi sa sauvegarde et ses états sauvegardés.',
+  },
   emulator: {
     bootFailedTitle: 'Impossible de démarrer le jeu',
     bootFailedMessage:

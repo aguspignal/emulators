@@ -20,6 +20,11 @@
         {
           "action": "VIEW",
           "category": ["DEFAULT"],
+          "data": [{ "scheme": "content" }]
+        },
+        {
+          "action": "VIEW",
+          "category": ["DEFAULT"],
           "data": [
             { "scheme": "file", "mimeType": "application/octet-stream", "pathPattern": ".*\\\\.gba" },
             { "scheme": "file", "mimeType": "application/octet-stream", "pathPattern": ".*\\\\..*\\\\.gba" },
