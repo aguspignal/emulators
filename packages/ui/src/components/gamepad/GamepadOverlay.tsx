@@ -11,7 +11,7 @@ import * as Haptics from "expo-haptics";
 import type { EmulatorButton } from "@emulators/core-interface";
 import { useAppConfig } from "../../config";
 import { useSettings } from "../../settings/SettingsContext";
-import { colors, radius } from "../../theme";
+import { colors, fonts, radius } from "../../theme";
 import type { GamepadLayout, Rect, Region } from "./layout";
 import { buttonsForTouch, hitRegion } from "./hitTest";
 
@@ -295,8 +295,16 @@ const styles = StyleSheet.create({
   },
   facePressed: { backgroundColor: PAD_FILL_PRESSED },
   dpadArm: { position: "absolute", borderRadius: radius.sm },
+  // dpadArrow stays on the system font on purpose: ARROWS are U+25B2-block
+  // geometric shapes, outside Tourney's Latin-only coverage.
   dpadArrow: { color: colors.text, fontSize: 16, opacity: 0.75 },
-  label: { color: colors.text, fontSize: 20, fontWeight: "700", opacity: 0.85 },
+  label: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 20,
+    fontWeight: "900",
+    opacity: 0.85,
+  },
   labelSmall: { fontSize: 11, letterSpacing: 1 },
   menu: { borderRadius: radius.sm, gap: 3 },
   menuBar: {

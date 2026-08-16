@@ -11,23 +11,29 @@ import {
 import { useTranslation } from "react-i18next";
 import { useSQLiteContext } from "expo-sqlite";
 import {
+  acceptedExtensions,
   deleteCoversForRom,
   deleteRomFile,
   deleteRomRow,
   deleteSaveStatesForRom,
   deleteStateThumbsForRom,
+  importRomFromUri,
+  pickAndImportFolder,
   pickAndImportRom,
   resetRomCover,
   retryFailedCovers,
   romFileUri,
   setFavorite,
+  type FolderImportProgress,
   type RomRow,
 } from "@emulators/storage";
 import { useAppConfig } from "../config";
 import { useRoms } from "../storage/useRoms";
 import { useCoverSweep } from "../storage/useCoverSweep";
+import { useOpenedRom } from "../storage/useOpenedRom";
 import { EmptyLibrary } from "../components/EmptyLibrary";
 import { ErrorState } from "../components/ErrorState";
+import { ImportProgress } from "../components/ImportProgress";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { RomTile } from "../components/RomTile";
 import { chunkRows, posterGridLayout } from "../components/posterGrid";
@@ -50,6 +56,7 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
   const db = useSQLiteContext();
   const { roms, loading, error, reload } = useRoms();
   const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState<FolderImportProgress | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
   const grid = posterGridLayout(width);
@@ -75,7 +82,7 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
     // t's identity changes with the language — exactly the invalidation wanted.
   }, [roms, grid.columns, t]);
 
-  const importRom = useCallback(async () => {
+  const importOneRom = useCallback(async () => {
     if (importing) return;
     setImporting(true);
     try {
@@ -99,6 +106,54 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
     }
   }, [db, consoles, reload, importing, sweepCovers, t]);
 
+  const importFolder = useCallback(async () => {
+    if (importing) return;
+    setImporting(true);
+    try {
+      const result = await pickAndImportFolder(db, consoles, setProgress);
+      if (result.status !== "done") return;
+
+      await reload();
+      sweepCovers();
+
+      const { imported, duplicates, skipped, failed } = result;
+      // Nothing in the folder was a ROM for this app — "12 files skipped"
+      // would leave the user guessing what it wanted instead.
+      if (imported + duplicates + failed === 0) {
+        Alert.alert(
+          t("home.importDoneTitle"),
+          t("home.importNoneFound", { extensions: acceptedExtensions(consoles) }),
+        );
+        return;
+      }
+      // Only the counts that actually happened, so a clean run reads as one
+      // line rather than three zeroes.
+      const lines = [
+        imported > 0 ? t("home.importedCount", { count: imported }) : null,
+        duplicates > 0 ? t("home.importDuplicateCount", { count: duplicates }) : null,
+        skipped > 0 ? t("home.importSkippedCount", { count: skipped }) : null,
+        failed > 0 ? t("home.importFailedCount", { count: failed }) : null,
+      ].filter((line): line is string => line !== null);
+      Alert.alert(t("home.importDoneTitle"), lines.join("\n"));
+    } catch (error) {
+      showErrorAlert(t("home.importFailed"), error);
+    } finally {
+      setProgress(null);
+      setImporting(false);
+    }
+  }, [db, consoles, reload, importing, sweepCovers, t]);
+
+  // Both entry points stay: picking one game out of Downloads shouldn't mean
+  // granting access to the whole folder.
+  const startImport = useCallback(() => {
+    if (importing) return;
+    Alert.alert(t("home.importChooseTitle"), t("home.importChooseMessage"), [
+      { text: t("home.importPickFile"), onPress: () => void importOneRom() },
+      { text: t("home.importPickFolder"), onPress: () => void importFolder() },
+      { text: t("common.cancel"), style: "cancel" },
+    ]);
+  }, [importing, importOneRom, importFolder, t]);
+
   const openRom = useCallback(
     (rom: RomRow) => {
       try {
@@ -113,6 +168,30 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
       }
     },
     [navigation, t],
+  );
+
+  // A ROM the system handed us: a file manager's "open with". Import it the
+  // same way the picker would, then boot it — a duplicate is not an error
+  // here, it just means the library already has the row to boot.
+  useOpenedRom(
+    useCallback(
+      async (uri: string) => {
+        setImporting(true);
+        try {
+          const result = await importRomFromUri(db, consoles, uri);
+          if (result.status === "imported") {
+            await reload();
+            sweepCovers();
+          }
+          openRom(result.rom);
+        } catch (error) {
+          showErrorAlert(t("home.importFailed"), error);
+        } finally {
+          setImporting(false);
+        }
+      },
+      [db, consoles, reload, sweepCovers, openRom, t],
+    ),
   );
 
   // Size and last-played lost their place in the move from row to tile, so
@@ -180,72 +259,82 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
   );
 
   return (
-    <SectionList
-      sections={sections}
-      // One item is a whole row of tiles, so the id of its first ROM
-      // identifies it and shifts with the row when the library changes.
-      keyExtractor={(row) => `row-${row[0]?.id ?? "empty"}`}
-      renderSectionHeader={({ section }) => (
-        <Text style={styles.sectionHeader}>{section.title}</Text>
-      )}
-      // Tiles take their cover's own shape, so a row's items differ in
-      // height; top-aligning keeps the posters on one line rather than
-      // centring each against the tallest.
-      renderItem={({ item: row }) => (
-        <View style={[styles.row, { gap: grid.gap, marginBottom: grid.rowGap }]}>
-          {row.map((rom) => (
-            <RomTile
-              key={rom.id}
-              rom={rom}
-              width={grid.tileWidth}
-              onPress={() => openRom(rom)}
-              onLongPress={() => showRomActions(rom)}
-              onCoverMissing={handleCoverMissing}
-            />
-          ))}
-        </View>
-      )}
-      contentContainerStyle={roms.length === 0 ? styles.emptyContainer : { padding: grid.padding }}
-      // Only above a library that has something in it: the empty state carries
-      // its own add button, and SectionList renders both header and empty
-      // component, which would show two.
-      ListHeaderComponent={
-        roms.length === 0 ? null : (
-          <View style={styles.listHeader}>
-            <PrimaryButton label={t("home.addRom")} onPress={importRom} disabled={importing} />
+    <>
+      <SectionList
+        sections={sections}
+        // One item is a whole row of tiles, so the id of its first ROM
+        // identifies it and shifts with the row when the library changes.
+        keyExtractor={(row) => `row-${row[0]?.id ?? "empty"}`}
+        renderSectionHeader={({ section }) => (
+          <Text style={styles.sectionHeader}>{section.title}</Text>
+        )}
+        // Tiles take their cover's own shape, so a row's items differ in
+        // height; top-aligning keeps the posters on one line rather than
+        // centring each against the tallest.
+        renderItem={({ item: row }) => (
+          <View style={[styles.row, { gap: grid.gap, marginBottom: grid.rowGap }]}>
+            {row.map((rom) => (
+              <RomTile
+                key={rom.id}
+                rom={rom}
+                width={grid.tileWidth}
+                onPress={() => openRom(rom)}
+                onLongPress={() => showRomActions(rom)}
+                onCoverMissing={handleCoverMissing}
+              />
+            ))}
           </View>
-        )
-      }
-      ListEmptyComponent={
-        loading ? null : error != null ? (
-          <ErrorState
-            title={t("home.loadFailedTitle")}
-            message={t("home.loadFailedMessage")}
-            actionLabel={t("common.retry")}
-            onAction={() => void reload()}
+        )}
+        contentContainerStyle={
+          roms.length === 0 ? styles.emptyContainer : { padding: grid.padding }
+        }
+        // Only above a library that has something in it: the empty state carries
+        // its own add button, and SectionList renders both header and empty
+        // component, which would show two.
+        ListHeaderComponent={
+          roms.length === 0 ? null : (
+            <View style={styles.listHeader}>
+              <PrimaryButton label={t("home.addRom")} onPress={startImport} disabled={importing} />
+            </View>
+          )
+        }
+        ListEmptyComponent={
+          loading ? null : error != null ? (
+            <ErrorState
+              title={t("home.loadFailedTitle")}
+              message={t("home.loadFailedMessage")}
+              actionLabel={t("common.retry")}
+              onAction={() => void reload()}
+            />
+          ) : (
+            <EmptyLibrary onAdd={startImport} />
+          )
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              // Clears the backoff first, so a pull is also "try the covers
+              // that failed while I was offline, now".
+              await retryFailedCovers(db).catch((error: unknown) =>
+                console.warn("could not clear cover backoff:", error),
+              );
+              await reload();
+              setRefreshing(false);
+              sweepCovers();
+            }}
+            tintColor={colors.text}
           />
-        ) : (
-          <EmptyLibrary onAdd={importRom} />
-        )
-      }
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={async () => {
-            setRefreshing(true);
-            // Clears the backoff first, so a pull is also "try the covers
-            // that failed while I was offline, now".
-            await retryFailedCovers(db).catch((error: unknown) =>
-              console.warn("could not clear cover backoff:", error),
-            );
-            await reload();
-            setRefreshing(false);
-            sweepCovers();
-          }}
-          tintColor={colors.text}
-        />
-      }
-    />
+        }
+      />
+      <ImportProgress
+        visible={progress !== null}
+        done={progress?.done ?? 0}
+        total={progress?.total ?? 0}
+        currentName={progress?.currentName ?? ""}
+      />
+    </>
   );
 }
 

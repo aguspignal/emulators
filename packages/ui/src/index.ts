@@ -14,6 +14,8 @@ export { RomTile } from './components/RomTile';
 export { posterGridLayout } from './components/posterGrid';
 export type { PosterGridLayout } from './components/posterGrid';
 export { EmptyLibrary } from './components/EmptyLibrary';
+export { ImportProgress } from './components/ImportProgress';
+export type { ImportProgressProps } from './components/ImportProgress';
 export { ErrorBoundary } from './components/ErrorBoundary';
 export { ErrorState } from './components/ErrorState';
 export { PrimaryButton } from './components/PrimaryButton';

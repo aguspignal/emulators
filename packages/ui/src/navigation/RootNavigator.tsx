@@ -2,7 +2,7 @@ import { Pressable, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { colors, spacing } from "../theme";
+import { colors, fonts, spacing } from "../theme";
 import { useAppConfig } from "../config";
 import { HomeScreen } from "../screens/HomeScreen";
 import { EmulatorScreen } from "../screens/EmulatorScreen";
@@ -24,6 +24,9 @@ export function RootNavigator() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.text,
+        // typography.title doesn't reach the native-stack header, so the
+        // display face has to be stated here or the titles keep the default.
+        headerTitleStyle: { fontFamily: fonts.display, fontWeight: "900" },
         contentStyle: { backgroundColor: colors.background },
       }}
     >

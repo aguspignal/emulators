@@ -47,8 +47,19 @@ export {
   deleteCoversForRom,
   sweepPartialCovers,
 } from './files';
-export { pickAndImportRom, RomImportError } from './import';
-export type { RomImportResult, RomImportErrorCode } from './import';
+export {
+  pickAndImportRom,
+  pickAndImportFolder,
+  importRomFromUri,
+  RomImportError,
+} from './import';
+export type {
+  RomImportResult,
+  OpenedRomImport,
+  RomImportErrorCode,
+  FolderImportProgress,
+  FolderImportResult,
+} from './import';
 export { lookupByMd5, lookupByNormalizedTitle, normalizeTitle } from './coverIndex';
 export type { CoverIndex } from './coverIndex';
 export {

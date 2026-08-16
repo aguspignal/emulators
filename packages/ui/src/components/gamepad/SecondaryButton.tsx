@@ -29,6 +29,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryPressed: { opacity: 0.6 },
-  secondaryLabel: { ...typography.body, fontWeight: '600', color: colors.text },
+  secondaryLabel: { ...typography.button, color: colors.text },
   dangerLabel: { color: colors.danger },
 });

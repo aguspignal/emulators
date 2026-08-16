@@ -22,8 +22,21 @@ export const spacing = {
   xl: 32,
 } as const;
 
+/**
+ * Both families are embedded natively by each app's `expo-font` config plugin
+ * entry (see the app.json files), not loaded at runtime — there is no async
+ * gate and no font flash.
+ */
+export const fonts = {
+  /** Tourney, registered at Black (900) only. Latin-only: headings and short labels. */
+  display: "Tourney",
+  /** Roboto 400/600. Carries Cyrillic and Greek — everything read in sentences. */
+  body: "Roboto",
+} as const;
+
 export const typography = {
-  title: { fontSize: 18, fontWeight: "700" },
-  body: { fontSize: 14, fontWeight: "400" },
-  caption: { fontSize: 12, fontWeight: "400" },
+  title: { fontFamily: fonts.display, fontSize: 18, fontWeight: "900" },
+  body: { fontFamily: fonts.body, fontSize: 14, fontWeight: "400" },
+  caption: { fontFamily: fonts.body, fontSize: 12, fontWeight: "400" },
+  button: { fontFamily: fonts.display, fontSize: 14, fontWeight: "900" },
 } as const;

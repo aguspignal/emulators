@@ -1,12 +1,14 @@
 # to implement
 
-- icons
-- screnshots of homescreen
 - modals
 - customization (pad layout/opacity)
 
 # to fix
 
-- that thing android/local.properties
+- deofuscation
 
 # to test
+
+- font (tourney)
+- import touching file
+- import from folder
