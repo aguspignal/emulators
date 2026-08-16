@@ -74,6 +74,28 @@ export default {
     license: 'Licença',
     note: 'O mapeamento de controles e a personalização do gamepad ficarão aqui.',
   },
+  help: {
+    title: 'Ajuda',
+    intro: 'O app não vem com jogos. Você adiciona seus próprios arquivos de ROM do dispositivo.',
+    stepsTitle: 'Importar ROMs',
+    step1Title: 'Coloque os arquivos no celular',
+    step1Body:
+      'Copie ou baixe seus arquivos de ROM para o armazenamento interno ou um cartão SD. Arquivos compatíveis: {{extensions}}. Compactados como .zip precisam ser extraídos antes.',
+    step2Title: 'Importe suas ROMs',
+    step2Body: 'Há três maneiras de fazer isso:',
+    step2OptionFile:
+      'Toque em "{{add}}" na tela da biblioteca e depois em "{{file}}" para um único jogo.',
+    step2OptionFolder:
+      'Toque em "{{add}}" e depois em "{{folder}}" para importar todas as ROMs de uma pasta e das subpastas.',
+    step2OptionOpenWith:
+      'Toque em um arquivo de ROM no gerenciador de arquivos ou nos downloads e escolha este app na lista "Abrir com": ele é importado e começa na hora.',
+    step3Title: 'Jogue',
+    step3Body:
+      'Toque em um jogo da biblioteca para iniciá-lo. Segure para marcá-lo como favorito ou excluí-lo.',
+    tipsTitle: 'Bom saber',
+    tip1: 'A importação copia o arquivo para dentro do app, então o original pode ser movido ou apagado depois.',
+    tip2: 'Excluir um jogo também apaga o save dele e os estados salvos.',
+  },
   emulator: {
     bootFailedTitle: 'Não foi possível iniciar o jogo',
     bootFailedMessage:

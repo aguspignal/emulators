@@ -13,6 +13,8 @@ export type RootStackParamList = {
   License: undefined;
   /** Picks the UI language; reads/writes the persisted preference via `useSettings`. */
   Language: undefined;
+  /** The import guide. Reads the accepted extensions from `AppConfig`, so no params. */
+  Help: undefined;
 };
 
 export type RootScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<

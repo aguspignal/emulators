@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -9,6 +9,7 @@ import { EmulatorScreen } from "../screens/EmulatorScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
 import { LicenseScreen } from "../screens/LicenseScreen";
 import { LanguageScreen } from "../screens/LanguageScreen";
+import { HelpScreen } from "../screens/HelpScreen";
 import type { RootStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -40,22 +41,33 @@ export function RootNavigator() {
         name="Home"
         component={HomeScreen}
         // Declared here rather than through `navigation.setOptions` in the
-        // screen: the gear depends on nothing the screen holds.
+        // screen: the header buttons depend on nothing the screen holds.
         options={({ navigation }) => ({
           title: t("home.title", {
             consoles: consoles.map((spec) => spec.abbreviation).join("/"),
           }),
           orientation: "portrait_up",
           headerRight: () => (
-            <Pressable
-              onPress={() => navigation.navigate("Settings")}
-              hitSlop={spacing.sm}
-              accessibilityRole="button"
-              accessibilityLabel={t("settings.title")}
-              style={({ pressed }) => [styles.headerButton, pressed && styles.headerButtonDimmed]}
-            >
-              <Ionicons name="settings-sharp" size={22} color={colors.text} />
-            </Pressable>
+            <View style={styles.headerButtons}>
+              <Pressable
+                onPress={() => navigation.navigate("Help")}
+                hitSlop={spacing.sm}
+                accessibilityRole="button"
+                accessibilityLabel={t("help.title")}
+                style={({ pressed }) => [styles.headerButton, pressed && styles.headerButtonDimmed]}
+              >
+                <Ionicons name="information-circle-outline" size={24} color={colors.text} />
+              </Pressable>
+              <Pressable
+                onPress={() => navigation.navigate("Settings")}
+                hitSlop={spacing.sm}
+                accessibilityRole="button"
+                accessibilityLabel={t("settings.title")}
+                style={({ pressed }) => [styles.headerButton, pressed && styles.headerButtonDimmed]}
+              >
+                <Ionicons name="settings-sharp" size={22} color={colors.text} />
+              </Pressable>
+            </View>
           ),
         })}
       />
@@ -68,6 +80,11 @@ export function RootNavigator() {
         name="Language"
         component={LanguageScreen}
         options={{ title: t("settings.language"), orientation: "portrait_up" }}
+      />
+      <Stack.Screen
+        name="Help"
+        component={HelpScreen}
+        options={{ title: t("help.title"), orientation: "portrait_up" }}
       />
       <Stack.Screen
         name="License"
@@ -88,6 +105,7 @@ export function RootNavigator() {
 }
 
 const styles = StyleSheet.create({
+  headerButtons: { flexDirection: "row", alignItems: "center" },
   headerButton: { paddingHorizontal: spacing.sm },
   headerButtonDimmed: { opacity: 0.5 },
 });

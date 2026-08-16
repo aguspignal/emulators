@@ -68,6 +68,28 @@ export default {
     license: '라이선스',
     note: '컨트롤러 매핑과 패드 커스터마이징 기능이 여기에 추가될 예정입니다.',
   },
+  help: {
+    title: '도움말',
+    intro: '이 앱에는 게임이 들어 있지 않습니다. ROM 파일은 기기에서 직접 추가합니다.',
+    stepsTitle: 'ROM 가져오기',
+    step1Title: '파일을 휴대폰에 준비하기',
+    step1Body:
+      'ROM 파일을 내부 저장소나 SD 카드에 복사하거나 내려받으세요. 지원 파일: {{extensions}}. .zip 같은 압축 파일은 먼저 풀어야 합니다.',
+    step2Title: 'ROM 가져오기',
+    step2Body: '세 가지 방법이 있습니다.',
+    step2OptionFile:
+      '라이브러리 화면에서 "{{add}}"를 누른 뒤, 게임 하나만 가져오려면 "{{file}}"을 선택하세요.',
+    step2OptionFolder:
+      '"{{add}}"를 누른 뒤 "{{folder}}"를 선택하면 폴더와 하위 폴더의 ROM을 모두 가져옵니다.',
+    step2OptionOpenWith:
+      '파일 관리자나 다운로드 목록에서 ROM 파일을 누르고 "연결 프로그램" 목록에서 이 앱을 선택하세요. 바로 가져와 실행됩니다.',
+    step3Title: '플레이',
+    step3Body:
+      '라이브러리에서 게임을 누르면 실행됩니다. 길게 누르면 즐겨찾기에 추가하거나 삭제할 수 있습니다.',
+    tipsTitle: '알아두면 좋은 점',
+    tip1: '가져오면 파일이 앱 안으로 복사되므로 원본은 나중에 옮기거나 삭제해도 됩니다.',
+    tip2: '게임을 삭제하면 저장 파일과 저장 상태도 함께 삭제됩니다.',
+  },
   emulator: {
     bootFailedTitle: '게임을 시작할 수 없습니다',
     bootFailedMessage:

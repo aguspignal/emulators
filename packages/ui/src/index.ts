@@ -10,6 +10,7 @@ export { EmulatorScreen } from './screens/EmulatorScreen';
 export { SettingsScreen } from './screens/SettingsScreen';
 export { LicenseScreen } from './screens/LicenseScreen';
 export { LanguageScreen } from './screens/LanguageScreen';
+export { HelpScreen } from './screens/HelpScreen';
 export { RomTile } from './components/RomTile';
 export { posterGridLayout } from './components/posterGrid';
 export type { PosterGridLayout } from './components/posterGrid';

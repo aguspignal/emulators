@@ -74,6 +74,28 @@ export default {
     license: 'Licenza',
     note: 'La mappatura dei controller e la personalizzazione del pad arriveranno qui.',
   },
+  help: {
+    title: 'Aiuto',
+    intro: "L'app non include giochi. Aggiungi i tuoi file ROM dal dispositivo.",
+    stepsTitle: 'Importare le ROM',
+    step1Title: 'Porta i file sul telefono',
+    step1Body:
+      'Copia o scarica i tuoi file ROM nella memoria interna o su una scheda SD. File supportati: {{extensions}}. Gli archivi come .zip vanno estratti prima.',
+    step2Title: 'Importa le tue ROM',
+    step2Body: 'Ci sono tre modi per farlo:',
+    step2OptionFile:
+      'Tocca "{{add}}" nella schermata della libreria, poi "{{file}}" per un singolo gioco.',
+    step2OptionFolder:
+      'Tocca "{{add}}", poi "{{folder}}" per importare tutte le ROM di una cartella e delle sue sottocartelle.',
+    step2OptionOpenWith:
+      'Tocca un file ROM nel gestore file o nei download e scegli questa app dall\'elenco "Apri con": viene importata e parte subito.',
+    step3Title: 'Gioca',
+    step3Body:
+      'Tocca un gioco nella libreria per avviarlo. Tienilo premuto per aggiungerlo ai preferiti o eliminarlo.',
+    tipsTitle: 'Da sapere',
+    tip1: "L'importazione copia il file nell'app, quindi l'originale può essere spostato o eliminato dopo.",
+    tip2: 'Eliminando un gioco vengono eliminati anche il suo salvataggio e i suoi stati salvati.',
+  },
   emulator: {
     bootFailedTitle: 'Impossibile avviare il gioco',
     bootFailedMessage:
