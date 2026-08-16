@@ -33,5 +33,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonDimmed: { opacity: 0.6 },
-  label: { ...typography.body, fontWeight: '600', color: colors.text },
+  label: { ...typography.button, color: colors.text },
 });

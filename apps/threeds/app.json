@@ -21,7 +21,29 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-font",
+        {
+          "android": {
+            "fonts": [
+              {
+                "fontFamily": "Tourney",
+                "fontDefinitions": [
+                  { "path": "../../packages/ui/assets/fonts/Tourney-Black.ttf", "weight": 900 }
+                ]
+              },
+              {
+                "fontFamily": "Roboto",
+                "fontDefinitions": [
+                  { "path": "../../packages/ui/assets/fonts/Roboto-Regular.ttf", "weight": 400 },
+                  { "path": "../../packages/ui/assets/fonts/Roboto-SemiBold.ttf", "weight": 600 }
+                ]
+              }
+            ]
+          }
+        }
+      ]
     ]
   }
 }
