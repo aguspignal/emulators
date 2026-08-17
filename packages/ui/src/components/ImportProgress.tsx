@@ -23,6 +23,9 @@ export function ImportProgress({ visible, done, total, currentName }: ImportProg
       transparent
       animationType="fade"
       statusBarTranslucent
+      // With statusBarTranslucent alone the backdrop stops short of the
+      // navigation bar and leaves a seam under the edge-to-edge layout.
+      navigationBarTranslucent
       // Android back must not dismiss it mid-copy.
       onRequestClose={() => {}}
     >

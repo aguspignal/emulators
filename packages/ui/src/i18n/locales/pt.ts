@@ -49,6 +49,8 @@ export default {
     favorite: 'Favoritar',
     unfavorite: 'Desfavoritar',
     updateFavoriteFailed: 'Não foi possível atualizar o favorito',
+    deleteConfirmMessage:
+      'Excluir este jogo e todos os seus saves? Isso não pode ser desfeito.',
     deleteFailed: 'Não foi possível excluir o jogo',
   },
   import: {
@@ -81,6 +83,7 @@ export default {
     termsOfUse: 'Termos de uso',
     privacyPolicy: 'Política de privacidade',
     license: 'Licença',
+    version: 'Versão {{version}}',
     note: 'O mapeamento de controles ficará aqui.',
   },
   help: {

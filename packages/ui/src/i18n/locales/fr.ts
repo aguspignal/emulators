@@ -49,6 +49,8 @@ export default {
     favorite: 'Ajouter aux favoris',
     unfavorite: 'Retirer des favoris',
     updateFavoriteFailed: 'Impossible de mettre à jour le favori',
+    deleteConfirmMessage:
+      'Supprimer ce jeu et toutes ses sauvegardes ? Cette action est irréversible.',
     deleteFailed: 'Impossible de supprimer le jeu',
   },
   import: {
@@ -81,6 +83,7 @@ export default {
     termsOfUse: "Conditions d'utilisation",
     privacyPolicy: 'Politique de confidentialité',
     license: 'Licence',
+    version: 'Version {{version}}',
     note: 'Le mappage des manettes arrivera ici.',
   },
   help: {

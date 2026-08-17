@@ -57,6 +57,8 @@ export default {
     favorite: 'В избранное',
     unfavorite: 'Убрать из избранного',
     updateFavoriteFailed: 'Не удалось обновить избранное',
+    deleteConfirmMessage:
+      'Удалить эту игру и все её сохранения? Это действие нельзя отменить.',
     deleteFailed: 'Не удалось удалить игру',
   },
   import: {
@@ -89,6 +91,7 @@ export default {
     termsOfUse: 'Условия использования',
     privacyPolicy: 'Политика конфиденциальности',
     license: 'Лицензия',
+    version: 'Версия {{version}}',
     note: 'Здесь появится настройка контроллеров.',
   },
   help: {

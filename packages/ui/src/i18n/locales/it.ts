@@ -49,6 +49,8 @@ export default {
     favorite: 'Aggiungi ai preferiti',
     unfavorite: 'Rimuovi dai preferiti',
     updateFavoriteFailed: 'Impossibile aggiornare il preferito',
+    deleteConfirmMessage:
+      "Eliminare questo gioco e tutti i suoi salvataggi? L'azione non può essere annullata.",
     deleteFailed: 'Impossibile eliminare il gioco',
   },
   import: {
@@ -81,6 +83,7 @@ export default {
     termsOfUse: 'Termini di utilizzo',
     privacyPolicy: 'Informativa sulla privacy',
     license: 'Licenza',
+    version: 'Versione {{version}}',
     note: 'La mappatura dei controller arriverà qui.',
   },
   help: {

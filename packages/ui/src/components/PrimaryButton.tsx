@@ -1,5 +1,5 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors, radius, spacing, typography } from '../theme';
+import { Pressable, StyleSheet, Text } from "react-native";
+import { colors, radius, spacing, typography } from "../theme";
 
 export function PrimaryButton({
   label,
@@ -14,10 +14,7 @@ export function PrimaryButton({
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => [
-        styles.button,
-        (pressed || disabled) && styles.buttonDimmed,
-      ]}
+      style={({ pressed }) => [styles.button, (pressed || disabled) && styles.buttonDimmed]}
     >
       <Text style={styles.label}>{label}</Text>
     </Pressable>
@@ -30,7 +27,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingVertical: spacing.sm + spacing.xs,
     paddingHorizontal: spacing.lg,
-    alignItems: 'center',
+    alignItems: "center",
   },
   buttonDimmed: { opacity: 0.6 },
   label: { ...typography.button, color: colors.text },

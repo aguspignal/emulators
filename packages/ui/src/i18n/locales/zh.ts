@@ -43,6 +43,7 @@ export default {
     favorite: '收藏',
     unfavorite: '取消收藏',
     updateFavoriteFailed: '无法更新收藏',
+    deleteConfirmMessage: '要删除这个游戏及其所有存档吗？此操作无法撤销。',
     deleteFailed: '无法删除游戏',
   },
   import: {
@@ -73,6 +74,7 @@ export default {
     termsOfUse: '使用条款',
     privacyPolicy: '隐私政策',
     license: '许可证',
+    version: '版本 {{version}}',
     note: '手柄映射将在这里提供。',
   },
   help: {

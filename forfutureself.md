@@ -1,6 +1,5 @@
 # to implement
 
-- modals
 - customaziable app icon
 
 # to fix

@@ -49,6 +49,8 @@ export default {
     favorite: 'Favorito',
     unfavorite: 'Quitar de favoritos',
     updateFavoriteFailed: 'No se pudo actualizar el favorito',
+    deleteConfirmMessage:
+      '¿Eliminar este juego y todas sus partidas guardadas? No se puede deshacer.',
     deleteFailed: 'No se pudo eliminar el juego',
   },
   import: {
@@ -81,6 +83,7 @@ export default {
     termsOfUse: 'Términos de uso',
     privacyPolicy: 'Política de privacidad',
     license: 'Licencia',
+    version: 'Versión {{version}}',
     note: 'La asignación de controles estará aquí.',
   },
   help: {

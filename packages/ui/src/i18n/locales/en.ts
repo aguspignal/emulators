@@ -52,6 +52,7 @@ export default {
     favorite: 'Favorite',
     unfavorite: 'Unfavorite',
     updateFavoriteFailed: "Couldn't update favorite",
+    deleteConfirmMessage: "Delete this game and all its saves? This can't be undone.",
     deleteFailed: "Couldn't delete game",
   },
   // Keys equal `RomImportError` codes; `showErrorAlert` resolves them.
@@ -85,6 +86,7 @@ export default {
     termsOfUse: 'Terms of Use',
     privacyPolicy: 'Privacy Policy',
     license: 'License',
+    version: 'Version {{version}}',
     note: 'Controller mapping will live here.',
   },
   help: {

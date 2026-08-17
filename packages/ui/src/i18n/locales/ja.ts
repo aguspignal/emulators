@@ -43,6 +43,7 @@ export default {
     favorite: 'お気に入りに追加',
     unfavorite: 'お気に入りから外す',
     updateFavoriteFailed: 'お気に入りを更新できませんでした',
+    deleteConfirmMessage: 'このゲームとすべてのセーブデータを削除しますか？元に戻せません。',
     deleteFailed: 'ゲームを削除できませんでした',
   },
   import: {
@@ -73,6 +74,7 @@ export default {
     termsOfUse: '利用規約',
     privacyPolicy: 'プライバシーポリシー',
     license: 'ライセンス',
+    version: 'バージョン {{version}}',
     note: 'コントローラー設定はここに追加される予定です。',
   },
   help: {

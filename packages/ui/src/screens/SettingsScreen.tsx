@@ -12,7 +12,7 @@ import type { RootScreenProps } from "../navigation/types";
 /** App settings, plus the About panel. */
 export function SettingsScreen({ navigation }: RootScreenProps<"Settings">) {
   const { t } = useTranslation();
-  const { consoles, termsUrl, privacyUrl } = useAppConfig();
+  const { consoles, termsUrl, privacyUrl, version } = useAppConfig();
   const { hapticsEnabled, setHapticsEnabled, language } = useSettings();
 
   const activeLanguage =
@@ -58,7 +58,7 @@ export function SettingsScreen({ navigation }: RootScreenProps<"Settings">) {
         <BrowserRow label={t("settings.privacyPolicy")} url={privacyUrl} />
         <NavRow label={t("settings.license")} onPress={() => navigation.navigate("License")} last />
       </View>
-      <Text style={styles.note}>{t("settings.note")}</Text>
+      <Text style={styles.note}>{t("settings.version", { version })}</Text>
     </ScrollView>
   );
 }
@@ -204,5 +204,11 @@ const styles = StyleSheet.create({
   switchRowText: { flex: 1, gap: spacing.xs },
   rowLabel: { ...typography.caption, color: colors.textMuted },
   rowValue: { ...typography.body, color: colors.text },
-  note: { ...typography.caption, color: colors.textMuted, marginTop: spacing.sm },
+  note: {
+    ...typography.caption,
+    color: colors.textMuted,
+    textAlign: "center",
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+  },
 });

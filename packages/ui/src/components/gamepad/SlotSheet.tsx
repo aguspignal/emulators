@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSQLiteContext } from 'expo-sqlite';
 import {
@@ -18,6 +18,7 @@ import { useAppConfig } from '../../config';
 import { colors, radius, spacing, typography } from '../../theme';
 import { showErrorAlert } from '../../utils/errors';
 import { formatRelativeTime } from '../../utils/format';
+import { Dialog, type DialogRequest } from '../Dialog';
 import { SecondaryButton } from './SecondaryButton';
 
 export interface SlotSheetProps {
@@ -49,6 +50,7 @@ export function SlotSheet({ mode, romId, spec, onPick, onBack }: SlotSheetProps)
   const { core } = useAppConfig();
   const db = useSQLiteContext();
   const [saved, setSaved] = useState<SaveStateRow[] | null>(null);
+  const [dialog, setDialog] = useState<DialogRequest | null>(null);
 
   const reload = useCallback(() => {
     listSaveStates(db, romId)
@@ -68,14 +70,20 @@ export function SlotSheet({ mode, romId, spec, onPick, onBack }: SlotSheetProps)
       // Loading costs nothing, but saving destroys whatever the slot held —
       // and the rows look alike, so a mis-tap is easy.
       if (mode === 'save' && entry.saved) {
-        Alert.alert(
-          entry.label,
-          t('slots.overwriteMessage', { time: formatRelativeTime(entry.saved.saved_at) }),
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            { text: t('slots.overwrite'), style: 'destructive', onPress: () => onPick(entry.slot) },
-          ]
-        );
+        setDialog({
+          title: entry.label,
+          message: t('slots.overwriteMessage', {
+            time: formatRelativeTime(entry.saved.saved_at),
+          }),
+          buttons: [
+            { label: t('common.cancel'), style: 'cancel' },
+            {
+              label: t('slots.overwrite'),
+              style: 'destructive',
+              onPress: () => onPick(entry.slot),
+            },
+          ],
+        });
         return;
       }
       onPick(entry.slot);
@@ -87,28 +95,32 @@ export function SlotSheet({ mode, romId, spec, onPick, onBack }: SlotSheetProps)
     (entry: SlotEntry) => {
       const row = entry.saved;
       if (!row) return;
-      Alert.alert(entry.label, t('slots.deleteMessage'), [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await core.deleteState(entry.slot);
-              await deleteSaveState(db, romId, entry.slot);
-            } catch (error) {
-              showErrorAlert(t('slots.deleteFailed'), error);
-              return;
-            }
-            try {
-              deleteStateThumb(romId, entry.slot, row.saved_at);
-            } catch (error) {
-              console.error('thumbnail left behind:', error);
-            }
-            reload();
+      setDialog({
+        title: entry.label,
+        message: t('slots.deleteMessage'),
+        buttons: [
+          { label: t('common.cancel'), style: 'cancel' },
+          {
+            label: t('common.delete'),
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await core.deleteState(entry.slot);
+                await deleteSaveState(db, romId, entry.slot);
+              } catch (error) {
+                showErrorAlert(t('slots.deleteFailed'), error);
+                return;
+              }
+              try {
+                deleteStateThumb(romId, entry.slot, row.saved_at);
+              } catch (error) {
+                console.error('thumbnail left behind:', error);
+              }
+              reload();
+            },
           },
-        },
-      ]);
+        ],
+      });
     },
     [core, db, romId, reload, t]
   );
@@ -177,6 +189,7 @@ export function SlotSheet({ mode, romId, spec, onPick, onBack }: SlotSheetProps)
         />
         {anySaved && <Text style={styles.hint}>{t('slots.holdToDelete')}</Text>}
         <SecondaryButton label={t('common.back')} onPress={onBack} />
+        <Dialog visible={dialog !== null} request={dialog} onClose={() => setDialog(null)} />
       </Pressable>
     </Pressable>
   );

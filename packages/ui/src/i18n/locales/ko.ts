@@ -43,6 +43,7 @@ export default {
     favorite: '즐겨찾기에 추가',
     unfavorite: '즐겨찾기에서 제거',
     updateFavoriteFailed: '즐겨찾기를 업데이트할 수 없습니다',
+    deleteConfirmMessage: '이 게임과 모든 저장 데이터를 삭제할까요? 되돌릴 수 없습니다.',
     deleteFailed: '게임을 삭제할 수 없습니다',
   },
   import: {
@@ -73,6 +74,7 @@ export default {
     termsOfUse: '이용약관',
     privacyPolicy: '개인정보 처리방침',
     license: '라이선스',
+    version: '버전 {{version}}',
     note: '컨트롤러 매핑 기능이 여기에 추가될 예정입니다.',
   },
   help: {

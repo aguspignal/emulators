@@ -49,6 +49,8 @@ export default {
     favorite: 'Favorisieren',
     unfavorite: 'Aus Favoriten entfernen',
     updateFavoriteFailed: 'Favorit konnte nicht aktualisiert werden',
+    deleteConfirmMessage:
+      'Dieses Spiel und alle seine Spielstände löschen? Das lässt sich nicht rückgängig machen.',
     deleteFailed: 'Spiel konnte nicht gelöscht werden',
   },
   import: {
@@ -81,6 +83,7 @@ export default {
     termsOfUse: 'Nutzungsbedingungen',
     privacyPolicy: 'Datenschutzerklärung',
     license: 'Lizenz',
+    version: 'Version {{version}}',
     note: 'Die Controller-Zuordnung wird hier zu finden sein.',
   },
   help: {
