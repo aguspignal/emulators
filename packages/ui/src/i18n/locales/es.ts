@@ -65,6 +65,15 @@ export default {
     controls: 'Controles',
     buttonVibration: 'Vibración de botones',
     buttonVibrationDescription: 'Vibrar al presionar los botones del gamepad',
+    customizeGamepad: 'Personalizar gamepad',
+    padSize: 'Tamaño de los botones',
+    padOpacity: 'Opacidad',
+    padReset: 'Restablecer',
+    padHintPortrait:
+      'Estás editando el gamepad vertical. Gira el dispositivo para ajustar el horizontal.',
+    padHintLandscape:
+      'Estás editando el gamepad horizontal. Gira el dispositivo para ajustar el vertical.',
+    padDone: 'Listo',
     about: 'Acerca de',
     consoles: 'Consolas',
     supportedFiles: 'Archivos compatibles',
@@ -72,7 +81,7 @@ export default {
     termsOfUse: 'Términos de uso',
     privacyPolicy: 'Política de privacidad',
     license: 'Licencia',
-    note: 'La asignación de controles y la personalización del gamepad estarán aquí.',
+    note: 'La asignación de controles estará aquí.',
   },
   help: {
     title: 'Ayuda',

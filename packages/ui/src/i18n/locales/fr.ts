@@ -65,6 +65,15 @@ export default {
     controls: 'Commandes',
     buttonVibration: 'Vibration des boutons',
     buttonVibrationDescription: "Vibrer à l'appui des boutons de la manette",
+    customizeGamepad: 'Personnaliser la manette',
+    padSize: 'Taille des boutons',
+    padOpacity: 'Opacité',
+    padReset: 'Réinitialiser',
+    padHintPortrait:
+      "Vous modifiez la manette en portrait. Tournez l'appareil pour régler celle en paysage.",
+    padHintLandscape:
+      "Vous modifiez la manette en paysage. Tournez l'appareil pour régler celle en portrait.",
+    padDone: 'Terminé',
     about: 'À propos',
     consoles: 'Consoles',
     supportedFiles: 'Fichiers pris en charge',
@@ -72,7 +81,7 @@ export default {
     termsOfUse: "Conditions d'utilisation",
     privacyPolicy: 'Politique de confidentialité',
     license: 'Licence',
-    note: 'Le mappage des manettes et la personnalisation du pad arriveront ici.',
+    note: 'Le mappage des manettes arrivera ici.',
   },
   help: {
     title: 'Aide',

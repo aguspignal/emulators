@@ -38,6 +38,12 @@ export function SettingsScreen({ navigation }: RootScreenProps<"Settings">) {
           description={t("settings.buttonVibrationDescription")}
           value={hapticsEnabled}
           onToggle={() => setHapticsEnabled(!hapticsEnabled)}
+        />
+        {/* No `value`: Settings stays mounted under the pushed screen, so a
+            size shown here would go stale the moment it is changed. */}
+        <NavRow
+          label={t("settings.customizeGamepad")}
+          onPress={() => navigation.navigate("Controls")}
           last
         />
       </View>

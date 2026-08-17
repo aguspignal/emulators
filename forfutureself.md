@@ -1,7 +1,6 @@
 # to implement
 
 - modals
-- controls customization (layout/opacity)
 - customaziable app icon
 
 # to fix

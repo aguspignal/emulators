@@ -9,6 +9,7 @@ import { EmulatorScreen } from "../screens/EmulatorScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
 import { LicenseScreen } from "../screens/LicenseScreen";
 import { LanguageScreen } from "../screens/LanguageScreen";
+import { ControlsScreen } from "../screens/ControlsScreen";
 import { HelpScreen } from "../screens/HelpScreen";
 import type { RootStackParamList } from "./types";
 
@@ -80,6 +81,15 @@ export function RootNavigator() {
         name="Language"
         component={LanguageScreen}
         options={{ title: t("settings.language"), orientation: "portrait_up" }}
+      />
+      <Stack.Screen
+        name="Controls"
+        component={ControlsScreen}
+        // Emulator's options, deliberately: the screen previews the pad by
+        // calling the same layout hook the game does, so it has to be given
+        // the same window — full height, and free to rotate — or the preview
+        // would be laying out for a screen the game never gets.
+        options={{ headerShown: false, orientation: "all" }}
       />
       <Stack.Screen
         name="Help"

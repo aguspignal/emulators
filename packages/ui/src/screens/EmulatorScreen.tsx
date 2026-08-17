@@ -20,6 +20,7 @@ import { useAppConfig } from "../config";
 // change identity on a language switch, and through the callback deps that
 // would re-run the boot effect — unloading and rebooting the running game.
 import i18n from "../i18n";
+import { useSettings } from "../settings/SettingsContext";
 import { colors } from "../theme";
 import { showErrorAlert } from "../utils/errors";
 import { GamepadOverlay } from "../components/gamepad/GamepadOverlay";
@@ -41,6 +42,7 @@ const FAST_FORWARD_SPEED = 1.75;
  */
 export function EmulatorScreen({ route, navigation }: RootScreenProps<"Emulator">) {
   const { core, EmulatorView, consoles } = useAppConfig();
+  const { padScale, padOpacity } = useSettings();
   const db = useSQLiteContext();
   const { romId, romUri, romName } = route.params;
   const [booted, setBooted] = useState<RomInfo | null>(null);
@@ -282,7 +284,8 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<"Emulator"
   const spec = booted ? CONSOLES[booted.console] : consoles[0];
   // Rotating the device rebuilds this: landscape floats the pad over a
   // full-bleed game, portrait puts the game on top and the pad in a band below.
-  const layout = useEmulatorLayout(spec.buttons);
+  // The size is the player's, per orientation; `buildEmulatorLayout` picks.
+  const layout = useEmulatorLayout(spec.buttons, padScale);
 
   return (
     <View style={styles.container}>
@@ -295,7 +298,12 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<"Emulator"
       )}
       <EmulatorView style={absoluteRect(layout.screen)} />
       {booted && (
-        <GamepadOverlay layout={layout.pad} onMenu={openMenu} suspended={menu !== "closed"} />
+        <GamepadOverlay
+          layout={layout.pad}
+          onMenu={openMenu}
+          suspended={menu !== "closed"}
+          opacity={padOpacity[layout.orientation]}
+        />
       )}
       {booted && menu === "root" && (
         <GameMenu

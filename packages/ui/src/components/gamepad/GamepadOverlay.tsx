@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AppState,
   StyleSheet,
-  Text,
   View,
   type GestureResponderEvent,
   type NativeTouchEvent,
@@ -11,18 +10,12 @@ import * as Haptics from "expo-haptics";
 import type { EmulatorButton } from "@emulators/core-interface";
 import { useAppConfig } from "../../config";
 import { useSettings } from "../../settings/SettingsContext";
-import { colors, fonts, radius } from "../../theme";
-import type { GamepadLayout, Rect, Region } from "./layout";
+import type { GamepadLayout, Region } from "./layout";
 import { buttonsForTouch, hitRegion } from "./hitTest";
-
-const EMPTY_PRESSED: ReadonlySet<EmulatorButton> = new Set();
+import { NO_BUTTONS_PRESSED, PadVisuals } from "./PadVisuals";
 
 /** Whatever the platform stamps on a touch; only ever used as a map key. */
 type TouchId = NativeTouchEvent["identifier"];
-
-const PAD_FILL = "rgba(242, 242, 245, 0.16)";
-const PAD_FILL_PRESSED = "rgba(230, 0, 18, 0.62)";
-const PAD_BORDER = "rgba(242, 242, 245, 0.30)";
 
 export interface GamepadOverlayProps {
   /**
@@ -34,6 +27,8 @@ export interface GamepadOverlayProps {
   onMenu: () => void;
   /** Stops accepting touches and releases everything held (pause menu open). */
   suspended?: boolean;
+  /** The player's pad transparency; applied to the drawing, never to this view. */
+  opacity?: number;
 }
 
 /**
@@ -44,8 +39,17 @@ export interface GamepadOverlayProps {
  * single full-screen responder that hit-tests every entry in
  * `nativeEvent.touches` itself — which is also why the menu is a region here
  * rather than a sibling `Pressable` that would steal the responder.
+ *
+ * The drawing is `PadVisuals`, a child: this component owns the input and
+ * nothing else, which is what lets the settings editor preview a pad without
+ * being able to press one.
  */
-export function GamepadOverlay({ layout, onMenu, suspended = false }: GamepadOverlayProps) {
+export function GamepadOverlay({
+  layout,
+  onMenu,
+  suspended = false,
+  opacity,
+}: GamepadOverlayProps) {
   const { core } = useAppConfig();
   const { hapticsEnabled } = useSettings();
 
@@ -60,7 +64,8 @@ export function GamepadOverlay({ layout, onMenu, suspended = false }: GamepadOve
   const pressed = useRef<Set<EmulatorButton>>(new Set());
   // Touch identifier -> the region that finger is steering (D-pad only).
   const owners = useRef<Map<TouchId, Region>>(new Map());
-  const [visiblePressed, setVisiblePressed] = useState<ReadonlySet<EmulatorButton>>(EMPTY_PRESSED);
+  const [visiblePressed, setVisiblePressed] =
+    useState<ReadonlySet<EmulatorButton>>(NO_BUTTONS_PRESSED);
 
   const applyPressed = useCallback(
     (next: Set<EmulatorButton>) => {
@@ -182,136 +187,8 @@ export function GamepadOverlay({ layout, onMenu, suspended = false }: GamepadOve
       onResponderRelease={handleEnd}
       onResponderTerminate={releaseAll}
     >
-      {layout.map((region) => (
-        <RegionView key={regionKey(region)} region={region} pressed={visiblePressed} />
-      ))}
+      <PadVisuals layout={layout} pressed={visiblePressed} opacity={opacity} />
     </View>
   );
 }
 
-function regionKey(region: Region): string {
-  return region.kind === "button" ? region.button : region.kind;
-}
-
-function rectStyle(rect: Rect) {
-  return {
-    position: "absolute" as const,
-    left: rect.x,
-    top: rect.y,
-    width: rect.width,
-    height: rect.height,
-  };
-}
-
-function RegionView({ region, pressed }: { region: Region; pressed: ReadonlySet<EmulatorButton> }) {
-  if (region.kind === "dpad") return <DpadView region={region} pressed={pressed} />;
-
-  if (region.kind === "menu") {
-    return (
-      <View style={[rectStyle(region.visual), styles.face, styles.menu]}>
-        <View style={styles.menuBar} />
-        <View style={styles.menuBar} />
-        <View style={styles.menuBar} />
-      </View>
-    );
-  }
-
-  const isPressed = pressed.has(region.button);
-  return (
-    <View
-      style={[
-        rectStyle(region.visual),
-        styles.face,
-        { borderRadius: region.shape === "round" ? region.visual.height / 2 : radius.sm },
-        isPressed && styles.facePressed,
-      ]}
-    >
-      <Text style={[styles.label, region.shape === "pill" && styles.labelSmall]}>
-        {region.label}
-      </Text>
-    </View>
-  );
-}
-
-const DIRECTIONS = ["up", "left", "right", "down"] as const;
-const ARROWS: Record<(typeof DIRECTIONS)[number], string> = {
-  up: "▲",
-  left: "◀",
-  right: "▶",
-  down: "▼",
-};
-
-function DpadView({
-  region,
-  pressed,
-}: {
-  region: Extract<Region, { kind: "dpad" }>;
-  pressed: ReadonlySet<EmulatorButton>;
-}) {
-  const cell = region.visual.width / 3;
-  // Column/row of each arm in the 3x3 grid the cross is drawn on.
-  const cells: Record<(typeof DIRECTIONS)[number], [number, number]> = {
-    up: [1, 0],
-    left: [0, 1],
-    right: [2, 1],
-    down: [1, 2],
-  };
-
-  return (
-    <View style={rectStyle(region.visual)}>
-      <View
-        style={[
-          styles.face,
-          { position: "absolute", left: cell, top: cell, width: cell, height: cell },
-        ]}
-      />
-      {DIRECTIONS.map((direction) => {
-        const [col, row] = cells[direction];
-        return (
-          <View
-            key={direction}
-            style={[
-              styles.face,
-              styles.dpadArm,
-              { left: col * cell, top: row * cell, width: cell, height: cell },
-              pressed.has(direction) && styles.facePressed,
-            ]}
-          >
-            <Text style={styles.dpadArrow}>{ARROWS[direction]}</Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  face: {
-    backgroundColor: PAD_FILL,
-    borderWidth: 1,
-    borderColor: PAD_BORDER,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  facePressed: { backgroundColor: PAD_FILL_PRESSED },
-  dpadArm: { position: "absolute", borderRadius: radius.sm },
-  // dpadArrow stays on the system font on purpose: ARROWS are U+25B2-block
-  // geometric shapes, outside Tourney's Latin-only coverage.
-  dpadArrow: { color: colors.text, fontSize: 16, opacity: 0.75 },
-  label: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 20,
-    fontWeight: "900",
-    opacity: 0.85,
-  },
-  labelSmall: { fontSize: 11, letterSpacing: 1 },
-  menu: { borderRadius: radius.sm, gap: 3 },
-  menuBar: {
-    width: "45%",
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: colors.text,
-    opacity: 0.85,
-  },
-});
