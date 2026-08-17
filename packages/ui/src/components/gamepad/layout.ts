@@ -45,6 +45,13 @@ export interface LayoutOptions {
   /** Usable rect the pad is laid out in — safe-area insets already applied. */
   area: Rect;
   buttons: readonly EmulatorButton[];
+  /**
+   * Multiplier on every button size; 1 is the stock pad. Sizes only — the
+   * outer margin does not scale, so buttons stay pinned to the area's edges
+   * and grow inward. A scale the area cannot fit is saturated down (never
+   * below 1); see `buildGamepadLayout`.
+   */
+  scale?: number;
 }
 
 export interface EmulatorLayoutOptions {
@@ -52,6 +59,12 @@ export interface EmulatorLayoutOptions {
   height: number;
   insets: Insets;
   buttons: readonly EmulatorButton[];
+  /**
+   * The player's pad size for each orientation. Passed as a pair, not as one
+   * number, because this function is the single place that decides which
+   * orientation the window is in — no caller should have to guess first.
+   */
+  scale?: Record<Orientation, number>;
 }
 
 export interface EmulatorLayout {
@@ -91,6 +104,7 @@ export function buildEmulatorLayout({
   height,
   insets,
   buttons,
+  scale,
 }: EmulatorLayoutOptions): EmulatorLayout {
   if (width >= height) {
     const area: Rect = {
@@ -103,7 +117,7 @@ export function buildEmulatorLayout({
       orientation: "landscape",
       screen: { x: 0, y: 0, width, height },
       padArea: area,
-      pad: buildGamepadLayout({ area, buttons }),
+      pad: buildGamepadLayout({ area, buttons, scale: scale?.landscape }),
     };
   }
 
@@ -132,7 +146,7 @@ export function buildEmulatorLayout({
       height: usableHeight - padHeight,
     },
     padArea,
-    pad: buildGamepadLayout({ area: padArea, buttons }),
+    pad: buildGamepadLayout({ area: padArea, buttons, scale: scale?.portrait }),
   };
 }
 
@@ -183,17 +197,54 @@ function pill(button: EmulatorButton, visual: Rect): Region {
   };
 }
 
+/** How much the fit guard gives up per attempt when a scale does not fit. */
+const SCALE_STEP_DOWN = 0.02;
+
 /**
- * Builds the pad for a console's button set inside `area`. Everything is
- * derived from that rect, so the same code lays out the landscape pad (the
- * whole usable window, floating over the game) and the portrait one (the band
- * below the game) — and either way it keeps clear of the camera cutout and
- * gesture bar, since insets are already baked into the rect.
+ * The largest scale at or below the requested one that `area` can actually fit.
  *
- * Regions are ordered most-specific first; `hitRegion` returns the first
- * match, so overlapping hit slop never steals a touch from a real button.
+ * The portrait band keeps its height at every scale — the game area must not
+ * move while the player drags a size slider — so on a short device the pad
+ * fills the band well before the top of the range. Rather than clamp every
+ * device to the worst one, grow until it stops fitting and then stop.
+ *
+ * Never below 1. That is the layout everything shipped with, and its fit is a
+ * given, so a request at or under the stock size is always honoured exactly.
  */
-export function buildGamepadLayout({ area, buttons }: LayoutOptions): GamepadLayout {
+function fitMetrics(area: Rect, buttons: readonly EmulatorButton[], scale: number) {
+  const floor = Math.min(scale, 1);
+  let metrics = padMetrics(area, buttons, scale);
+  while (metrics.scale > floor && metrics.overflows) {
+    metrics = padMetrics(area, buttons, Math.max(floor, metrics.scale - SCALE_STEP_DOWN));
+  }
+  return metrics;
+}
+
+/**
+ * What a scale request would really come out as in this area — the same
+ * saturation `buildGamepadLayout` applies, without building anything.
+ *
+ * The settings editor asks for the top of the range and gets back the top this
+ * device can reach, which is what its size slider ends at: a slider that keeps
+ * travelling after the pad has stopped growing is a slider that lies. Rounded
+ * because repeated subtraction of `SCALE_STEP_DOWN` drifts (1.16 arrives as
+ * 1.1600000000000001).
+ */
+export function fittingScale({ area, buttons, scale = 1 }: LayoutOptions): number {
+  return Math.round(fitMetrics(area, buttons, scale).scale * 1000) / 1000;
+}
+
+/**
+ * Every size and anchor the pad is built from, evaluated at one candidate
+ * scale. Separate from the placement below so a scale can be *tried*: an area
+ * too short for the sizes it asks for reports `overflows`, and
+ * `buildGamepadLayout` comes back for something smaller.
+ *
+ * Nothing is placed until every size is known: the shoulders hang off the top
+ * of the D-pad / face cluster, and in portrait it is the Select row's height
+ * that stops them riding up into it.
+ */
+function padMetrics(area: Rect, buttons: readonly EmulatorButton[], scale: number) {
   const has = (b: EmulatorButton) => buttons.includes(b);
 
   const left = area.x;
@@ -203,8 +254,11 @@ export function buildGamepadLayout({ area, buttons }: LayoutOptions): GamepadLay
   const centerX = area.x + area.width / 2;
   const usableHeight = area.height;
 
+  // Deliberately outside `scale`: buttons stay pinned to the pad area's outer
+  // edges and grow inward, so a larger pad never reaches past the rect it was
+  // given. `smallGap` and `HIT_SLOP` are fixed for a different reason — touch
+  // slop tracks the size of a finger, not the size of a button.
   const margin = Math.max(16, Math.round(usableHeight * 0.06));
-  const regions: GamepadLayout = [];
 
   // Every size below is derived from the pad area's HEIGHT, never its width.
   // The area is about as tall in portrait as in landscape (the band vs. the
@@ -212,18 +266,16 @@ export function buildGamepadLayout({ area, buttons }: LayoutOptions): GamepadLay
   // lands on opposite sides of its `Math.min` in the two orientations — the
   // cap binds in landscape and the fraction binds in portrait, which makes
   // editing the cap silently do nothing in portrait.
+  //
+  // `scale` multiplies each finished size — the cap included, or growing would
+  // do nothing in landscape, where the cap is what binds.
 
-  // --- Geometry -------------------------------------------------------------
-  // Nothing is placed until every size is known: the shoulders hang off the top
-  // of the D-pad / face cluster, and in portrait it is the Select row's height
-  // that stops them riding up into it.
-
-  const shoulderWidth = Math.round(Math.min(usableHeight * 0.22, 124));
-  const shoulderHeight = Math.round(Math.min(usableHeight * 0.13, 64));
+  const shoulderWidth = Math.round(Math.min(usableHeight * 0.22, 124) * scale);
+  const shoulderHeight = Math.round(Math.min(usableHeight * 0.13, 64) * scale);
   // ZL/ZR sit just inboard of L/R.
   const zGap = shoulderWidth + 12;
 
-  const faceSize = Math.round(Math.min(usableHeight * 0.2, 68));
+  const faceSize = Math.round(Math.min(usableHeight * 0.2, 68) * scale);
   const faceGap = Math.round(faceSize * 0.28);
   // Cluster radius from its centre to a button centre.
   const spread = faceSize / 2 + faceGap / 2;
@@ -232,15 +284,10 @@ export function buildGamepadLayout({ area, buttons }: LayoutOptions): GamepadLay
   // The diamond's top button sits a full radius up; the GB/GBA pair only 0.45.
   const diamond = has("x") || has("y");
   const faceTop = clusterCy - spread * (diamond ? 1 : 0.45) - faceSize / 2;
+  // Likewise the far side of the cluster, which is what the D-pad grows toward.
+  const faceLeft = clusterCx - spread * (diamond ? 1 : 0.75) - faceSize / 2;
 
-  const face = (button: EmulatorButton, dx: number, dy: number): Rect => ({
-    x: Math.round(clusterCx + dx * spread - faceSize / 2),
-    y: Math.round(clusterCy + dy * spread - faceSize / 2),
-    width: faceSize,
-    height: faceSize,
-  });
-
-  const dpadSize = Math.round(Math.min(usableHeight * 0.5, 150));
+  const dpadSize = Math.round(Math.min(usableHeight * 0.5, 150) * scale);
   const dpadVisual: Rect = {
     x: left + margin,
     y: bottom - margin - dpadSize,
@@ -248,10 +295,10 @@ export function buildGamepadLayout({ area, buttons }: LayoutOptions): GamepadLay
     height: dpadSize,
   };
 
-  const smallWidth = Math.round(Math.min(usableHeight * 0.22, 64));
-  const smallHeight = Math.round(Math.min(usableHeight * 0.1, 28));
+  const smallWidth = Math.round(Math.min(usableHeight * 0.22, 64) * scale);
+  const smallHeight = Math.round(Math.min(usableHeight * 0.1, 28) * scale);
   const smallGap = 8;
-  const menuSize = Math.round(Math.min(usableHeight * 0.12, 36));
+  const menuSize = Math.round(Math.min(usableHeight * 0.12, 36) * scale);
   // The menu sits between Select and Start, so its gap has to clear both
   // neighbours' hit slop as well: overlapping slop there would pause the game
   // on a mistimed Start.
@@ -279,6 +326,106 @@ export function buildGamepadLayout({ area, buttons }: LayoutOptions): GamepadLay
   const shoulderY = Math.round(
     Math.max(shoulderMinY, Math.min(dpadVisual.y, faceTop) - margin - shoulderHeight),
   );
+
+  // Whether this scale actually fits, in the three ways a bigger pad runs out
+  // of room. Vertically the top stack — the shoulders, or the Select row once
+  // it has moved up there — has to stay clear of whichever of the D-pad and
+  // the face cluster reaches highest; at the stock size the `Math.max` above
+  // absorbs that collision silently, so this is the same condition stated
+  // positively.
+  const ceiling = Math.min(dpadVisual.y, faceTop);
+  const hasShoulders = has("l") || has("r") || has("zl") || has("zr");
+  const stackCollides = hasShoulders
+    ? shoulderMinY + shoulderHeight + margin > ceiling
+    : !rowFits && rowBottom + smallGap > ceiling;
+  // Horizontally there are two, both only reachable in a portrait band: the
+  // D-pad and the face cluster grow toward each other along the bottom, and
+  // ZL/ZR grow toward each other in the middle of the shoulder row. Neither
+  // asks for clearance beyond not overlapping — the stock pad already runs as
+  // close as 3px on a small phone, so demanding a gap would refuse every
+  // narrow device the growth it can genuinely afford.
+  const bottomRowCollides = dpadVisual.x + dpadSize > faceLeft;
+  const zCollide =
+    has("zl") &&
+    has("zr") &&
+    left + margin + zGap + shoulderWidth > right - margin - shoulderWidth - zGap;
+  const overflows =
+    ceiling < top + margin || stackCollides || bottomRowCollides || zCollide;
+
+  return {
+    scale,
+    overflows,
+    left,
+    right,
+    centerX,
+    margin,
+    shoulderWidth,
+    shoulderHeight,
+    shoulderY,
+    zGap,
+    faceSize,
+    spread,
+    clusterCx,
+    clusterCy,
+    diamond,
+    dpadSize,
+    dpadVisual,
+    smallWidth,
+    smallHeight,
+    smallY,
+    menuSize,
+    menuGap,
+  };
+}
+
+/**
+ * Builds the pad for a console's button set inside `area`. Everything is
+ * derived from that rect, so the same code lays out the landscape pad (the
+ * whole usable window, floating over the game) and the portrait one (the band
+ * below the game) — and either way it keeps clear of the camera cutout and
+ * gesture bar, since insets are already baked into the rect.
+ *
+ * Regions are ordered most-specific first; `hitRegion` returns the first
+ * match, so overlapping hit slop never steals a touch from a real button.
+ */
+export function buildGamepadLayout({ area, buttons, scale = 1 }: LayoutOptions): GamepadLayout {
+  const has = (b: EmulatorButton) => buttons.includes(b);
+  const regions: GamepadLayout = [];
+
+  // Saturated down to what this area can hold; see `fitMetrics`. The settings
+  // editor caps its slider at the same number via `fittingScale`, so the pad
+  // and the slider run out of room together.
+  const metrics = fitMetrics(area, buttons, scale);
+
+  const {
+    left,
+    right,
+    centerX,
+    margin,
+    shoulderWidth,
+    shoulderHeight,
+    shoulderY,
+    zGap,
+    faceSize,
+    spread,
+    clusterCx,
+    clusterCy,
+    diamond,
+    dpadSize,
+    dpadVisual,
+    smallWidth,
+    smallHeight,
+    smallY,
+    menuSize,
+    menuGap,
+  } = metrics;
+
+  const face = (button: EmulatorButton, dx: number, dy: number): Rect => ({
+    x: Math.round(clusterCx + dx * spread - faceSize / 2),
+    y: Math.round(clusterCy + dy * spread - faceSize / 2),
+    width: faceSize,
+    height: faceSize,
+  });
 
   // --- Shoulders ------------------------------------------------------------
   if (has("l")) {

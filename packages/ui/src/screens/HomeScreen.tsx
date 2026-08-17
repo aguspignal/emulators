@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-  Alert,
   RefreshControl,
   SectionList,
   StyleSheet,
@@ -31,6 +30,7 @@ import { useAppConfig } from "../config";
 import { useRoms } from "../storage/useRoms";
 import { useCoverSweep } from "../storage/useCoverSweep";
 import { useOpenedRom } from "../storage/useOpenedRom";
+import { Dialog, type DialogRequest } from "../components/Dialog";
 import { EmptyLibrary } from "../components/EmptyLibrary";
 import { ErrorState } from "../components/ErrorState";
 import { ImportProgress } from "../components/ImportProgress";
@@ -58,6 +58,7 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState<FolderImportProgress | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [dialog, setDialog] = useState<DialogRequest | null>(null);
   const { width } = useWindowDimensions();
   const grid = posterGridLayout(width);
   const sweepCovers = useCoverSweep(reload);
@@ -94,10 +95,10 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
         // network call in it would hang the import behind a captive portal.
         sweepCovers();
       } else if (result.status === "duplicate") {
-        Alert.alert(
-          t("home.duplicateTitle"),
-          t("home.duplicateMessage", { name: result.displayName }),
-        );
+        setDialog({
+          title: t("home.duplicateTitle"),
+          message: t("home.duplicateMessage", { name: result.displayName }),
+        });
       }
     } catch (error) {
       showErrorAlert(t("home.importFailed"), error);
@@ -120,10 +121,10 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
       // Nothing in the folder was a ROM for this app — "12 files skipped"
       // would leave the user guessing what it wanted instead.
       if (imported + duplicates + failed === 0) {
-        Alert.alert(
-          t("home.importDoneTitle"),
-          t("home.importNoneFound", { extensions: acceptedExtensions(consoles) }),
-        );
+        setDialog({
+          title: t("home.importDoneTitle"),
+          message: t("home.importNoneFound", { extensions: acceptedExtensions(consoles) }),
+        });
         return;
       }
       // Only the counts that actually happened, so a clean run reads as one
@@ -134,7 +135,7 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
         skipped > 0 ? t("home.importSkippedCount", { count: skipped }) : null,
         failed > 0 ? t("home.importFailedCount", { count: failed }) : null,
       ].filter((line): line is string => line !== null);
-      Alert.alert(t("home.importDoneTitle"), lines.join("\n"));
+      setDialog({ title: t("home.importDoneTitle"), message: lines.join("\n") });
     } catch (error) {
       showErrorAlert(t("home.importFailed"), error);
     } finally {
@@ -147,11 +148,23 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
   // granting access to the whole folder.
   const startImport = useCallback(() => {
     if (importing) return;
-    Alert.alert(t("home.importChooseTitle"), t("home.importChooseMessage"), [
-      { text: t("home.importPickFile"), onPress: () => void importOneRom() },
-      { text: t("home.importPickFolder"), onPress: () => void importFolder() },
-      { text: t("common.cancel"), style: "cancel" },
-    ]);
+    setDialog({
+      title: t("home.importChooseTitle"),
+      message: t("home.importChooseMessage"),
+      buttons: [
+        {
+          label: t("home.importPickFile"),
+          icon: "document-outline",
+          onPress: () => void importOneRom(),
+        },
+        {
+          label: t("home.importPickFolder"),
+          icon: "folder-outline",
+          onPress: () => void importFolder(),
+        },
+        { label: t("common.cancel"), style: "cancel", icon: "close-outline" },
+      ],
+    });
   }, [importing, importOneRom, importFolder, t]);
 
   const openRom = useCallback(
@@ -194,8 +207,51 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
     ),
   );
 
+  // A second step in place of the options, rather than deleting on the first
+  // tap: this throws away the ROM and every save it owns, and "Delete" sits
+  // where a mis-tap from the tile's long-press can land on it.
+  const confirmDelete = useCallback(
+    (rom: RomRow) => {
+      setDialog({
+        title: rom.display_name,
+        message: t("home.deleteConfirmMessage"),
+        buttons: [
+          { label: t("common.cancel"), style: "cancel" },
+          {
+            label: t("common.delete"),
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await deleteRomRow(db, rom.id);
+              } catch (error) {
+                showErrorAlert(t("home.deleteFailed"), error);
+                return;
+              }
+              // Row first, then everything it owned: failing below leaves only
+              // orphan files on disk, never a library entry pointing at a
+              // missing ROM. `sha1` is null only for a ROM that was never
+              // played since the upgrade that added the column — which is also
+              // a ROM that has no saves.
+              try {
+                deleteRomFile(rom.file_name);
+                await deleteSaveStatesForRom(db, rom.id);
+                deleteStateThumbsForRom(rom.id);
+                deleteCoversForRom(rom.id);
+                if (rom.sha1) await core.deleteSaveData(rom.sha1);
+              } catch (error) {
+                console.error("leftovers from deleted ROM:", error);
+              }
+              void reload();
+            },
+          },
+        ],
+      });
+    },
+    [db, core, reload, t],
+  );
+
   // Size and last-played lost their place in the move from row to tile, so
-  // the long-press alert — which passed no message before — carries them now.
+  // the long-press dialog — which passed no message before — carries them now.
   const showRomActions = useCallback(
     (rom: RomRow) => {
       const subtitle = [
@@ -203,46 +259,32 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
         formatBytes(rom.size),
         formatLastPlayed(rom.last_played_at),
       ].join(" · ");
-      Alert.alert(rom.display_name, subtitle, [
-        {
-          text: rom.favorite === 1 ? t("home.unfavorite") : t("home.favorite"),
-          onPress: () => {
-            setFavorite(db, rom.id, rom.favorite !== 1)
-              .then(() => reload())
-              .catch((error: unknown) => showErrorAlert(t("home.updateFavoriteFailed"), error));
+      setDialog({
+        title: rom.display_name,
+        message: subtitle,
+        buttons: [
+          {
+            label: rom.favorite === 1 ? t("home.unfavorite") : t("home.favorite"),
+            icon: rom.favorite === 1 ? "heart-dislike-outline" : "heart-outline",
+            onPress: () => {
+              setFavorite(db, rom.id, rom.favorite !== 1)
+                .then(() => reload())
+                .catch((error: unknown) => showErrorAlert(t("home.updateFavoriteFailed"), error));
+            },
           },
-        },
-        {
-          text: t("common.delete"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteRomRow(db, rom.id);
-            } catch (error) {
-              showErrorAlert(t("home.deleteFailed"), error);
-              return;
-            }
-            // Row first, then everything it owned: failing below leaves only
-            // orphan files on disk, never a library entry pointing at a
-            // missing ROM. `sha1` is null only for a ROM that was never
-            // played since the upgrade that added the column — which is also
-            // a ROM that has no saves.
-            try {
-              deleteRomFile(rom.file_name);
-              await deleteSaveStatesForRom(db, rom.id);
-              deleteStateThumbsForRom(rom.id);
-              deleteCoversForRom(rom.id);
-              if (rom.sha1) await core.deleteSaveData(rom.sha1);
-            } catch (error) {
-              console.error("leftovers from deleted ROM:", error);
-            }
-            void reload();
+          {
+            label: t("common.delete"),
+            style: "destructive",
+            icon: "trash-outline",
+            // Swaps the confirmation into the open dialog instead of closing.
+            keepOpen: true,
+            onPress: () => confirmDelete(rom),
           },
-        },
-        { text: t("common.cancel"), style: "cancel" },
-      ]);
+          { label: t("common.cancel"), style: "cancel", icon: "close-outline" },
+        ],
+      });
     },
-    [db, core, reload, t],
+    [consoles, db, reload, confirmDelete, t],
   );
 
   const handleCoverMissing = useCallback(
@@ -334,6 +376,7 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
         total={progress?.total ?? 0}
         currentName={progress?.currentName ?? ""}
       />
+      <Dialog visible={dialog !== null} request={dialog} onClose={() => setDialog(null)} />
     </>
   );
 }

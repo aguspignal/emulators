@@ -30,6 +30,15 @@ export interface AppConfig {
    */
   licenseNotice: string;
   /**
+   * The app's user-facing version, shown at the foot of Settings. Required so
+   * a new app can't ship a blank one. It mirrors `version` in the app's
+   * `app.json` — the two are separate strings and must be edited together;
+   * `app.json` can't be imported here (the base tsconfig has no
+   * `resolveJsonModule`) and `expo-constants`, which would read it at runtime,
+   * is not installed in any app.
+   */
+  version: string;
+  /**
    * URLs of this app's hosted Terms of Use and Privacy Policy pages, opened
    * in the browser from Settings → Legal. Optional: until an app's pages are
    * deployed, leave them unset and the rows render inert.

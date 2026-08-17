@@ -52,6 +52,7 @@ export default {
     favorite: 'Favorite',
     unfavorite: 'Unfavorite',
     updateFavoriteFailed: "Couldn't update favorite",
+    deleteConfirmMessage: "Delete this game and all its saves? This can't be undone.",
     deleteFailed: "Couldn't delete game",
   },
   // Keys equal `RomImportError` codes; `showErrorAlert` resolves them.
@@ -69,6 +70,15 @@ export default {
     controls: 'Controls',
     buttonVibration: 'Button vibration',
     buttonVibrationDescription: 'Vibrate when pressing gamepad buttons',
+    customizeGamepad: 'Customize gamepad',
+    padSize: 'Button size',
+    padOpacity: 'Opacity',
+    padReset: 'Reset',
+    padHintPortrait:
+      'Editing the portrait gamepad. Rotate the device to adjust the landscape one.',
+    padHintLandscape:
+      'Editing the landscape gamepad. Rotate the device to adjust the portrait one.',
+    padDone: 'Done',
     about: 'About',
     consoles: 'Consoles',
     supportedFiles: 'Supported files',
@@ -76,7 +86,8 @@ export default {
     termsOfUse: 'Terms of Use',
     privacyPolicy: 'Privacy Policy',
     license: 'License',
-    note: 'Controller mapping and pad customization will live here.',
+    version: 'Version {{version}}',
+    note: 'Controller mapping will live here.',
   },
   help: {
     title: 'Help',

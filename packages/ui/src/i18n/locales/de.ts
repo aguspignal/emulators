@@ -49,6 +49,8 @@ export default {
     favorite: 'Favorisieren',
     unfavorite: 'Aus Favoriten entfernen',
     updateFavoriteFailed: 'Favorit konnte nicht aktualisiert werden',
+    deleteConfirmMessage:
+      'Dieses Spiel und alle seine Spielstände löschen? Das lässt sich nicht rückgängig machen.',
     deleteFailed: 'Spiel konnte nicht gelöscht werden',
   },
   import: {
@@ -65,6 +67,15 @@ export default {
     controls: 'Steuerung',
     buttonVibration: 'Tastenvibration',
     buttonVibrationDescription: 'Beim Drücken der Gamepad-Tasten vibrieren',
+    customizeGamepad: 'Gamepad anpassen',
+    padSize: 'Tastengröße',
+    padOpacity: 'Deckkraft',
+    padReset: 'Zurücksetzen',
+    padHintPortrait:
+      'Du bearbeitest das Gamepad im Hochformat. Drehe das Gerät, um das Querformat anzupassen.',
+    padHintLandscape:
+      'Du bearbeitest das Gamepad im Querformat. Drehe das Gerät, um das Hochformat anzupassen.',
+    padDone: 'Fertig',
     about: 'Über',
     consoles: 'Konsolen',
     supportedFiles: 'Unterstützte Dateien',
@@ -72,7 +83,8 @@ export default {
     termsOfUse: 'Nutzungsbedingungen',
     privacyPolicy: 'Datenschutzerklärung',
     license: 'Lizenz',
-    note: 'Controller-Zuordnung und Gamepad-Anpassung werden hier zu finden sein.',
+    version: 'Version {{version}}',
+    note: 'Die Controller-Zuordnung wird hier zu finden sein.',
   },
   help: {
     title: 'Hilfe',

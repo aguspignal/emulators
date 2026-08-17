@@ -11,6 +11,8 @@ const config: AppConfig = {
   core,
   EmulatorView,
   licenseNotice: LICENSE_NOTICE,
+  // Mirrors `version` in app.json — edit both together.
+  version: '1.1.0',
   coverIndexes: [{ console: 'nds', source: NDS_COVERS }],
 };
 

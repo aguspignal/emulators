@@ -13,6 +13,11 @@ export type RootStackParamList = {
   License: undefined;
   /** Picks the UI language; reads/writes the persisted preference via `useSettings`. */
   Language: undefined;
+  /**
+   * Gamepad size and transparency, over a live preview of the pad. Edits
+   * whichever orientation the device is held in, so it takes no params.
+   */
+  Controls: undefined;
   /** The import guide. Reads the accepted extensions from `AppConfig`, so no params. */
   Help: undefined;
 };

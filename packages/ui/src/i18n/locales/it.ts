@@ -49,6 +49,8 @@ export default {
     favorite: 'Aggiungi ai preferiti',
     unfavorite: 'Rimuovi dai preferiti',
     updateFavoriteFailed: 'Impossibile aggiornare il preferito',
+    deleteConfirmMessage:
+      "Eliminare questo gioco e tutti i suoi salvataggi? L'azione non può essere annullata.",
     deleteFailed: 'Impossibile eliminare il gioco',
   },
   import: {
@@ -65,6 +67,15 @@ export default {
     controls: 'Controlli',
     buttonVibration: 'Vibrazione dei pulsanti',
     buttonVibrationDescription: 'Vibra alla pressione dei pulsanti del gamepad',
+    customizeGamepad: 'Personalizza gamepad',
+    padSize: 'Dimensione dei pulsanti',
+    padOpacity: 'Opacità',
+    padReset: 'Ripristina',
+    padHintPortrait:
+      'Stai modificando il gamepad in verticale. Ruota il dispositivo per regolare quello in orizzontale.',
+    padHintLandscape:
+      'Stai modificando il gamepad in orizzontale. Ruota il dispositivo per regolare quello in verticale.',
+    padDone: 'Fatto',
     about: 'Informazioni',
     consoles: 'Console',
     supportedFiles: 'File supportati',
@@ -72,7 +83,8 @@ export default {
     termsOfUse: 'Termini di utilizzo',
     privacyPolicy: 'Informativa sulla privacy',
     license: 'Licenza',
-    note: 'La mappatura dei controller e la personalizzazione del pad arriveranno qui.',
+    version: 'Versione {{version}}',
+    note: 'La mappatura dei controller arriverà qui.',
   },
   help: {
     title: 'Aiuto',

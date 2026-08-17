@@ -1,10 +1,10 @@
-import type { ComponentProps } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { useState, type ComponentProps } from "react";
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import i18n from "../../i18n";
 import { colors, spacing, typography } from "../../theme";
+import { Dialog, type DialogRequest } from "../Dialog";
 
 export interface GameMenuProps {
   title: string;
@@ -18,10 +18,6 @@ export interface GameMenuProps {
   onReset: () => void;
   onExit: () => void;
 }
-
-// Module-level, so global i18n.t — evaluated at press time, always current.
-const notAvailable = () =>
-  Alert.alert(i18n.t("gameMenu.notAvailableTitle"), i18n.t("gameMenu.notAvailableMessage"));
 
 /**
  * The in-game pause menu: a full-screen layer with the game's library name on
@@ -42,13 +38,24 @@ export function GameMenu({
 }: GameMenuProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const [dialog, setDialog] = useState<DialogRequest | null>(null);
+
+  const notAvailable = () =>
+    setDialog({
+      title: t("gameMenu.notAvailableTitle"),
+      message: t("gameMenu.notAvailableMessage"),
+    });
 
   // Resetting throws away everything since the last save; make sure it's meant.
   const confirmReset = () =>
-    Alert.alert(t("gameMenu.reset"), t("gameMenu.resetConfirmMessage"), [
-      { text: t("common.cancel"), style: "cancel" },
-      { text: t("gameMenu.resetAction"), style: "destructive", onPress: onReset },
-    ]);
+    setDialog({
+      title: t("gameMenu.reset"),
+      message: t("gameMenu.resetConfirmMessage"),
+      buttons: [
+        { label: t("common.cancel"), style: "cancel" },
+        { label: t("gameMenu.resetAction"), style: "destructive", onPress: onReset },
+      ],
+    });
 
   return (
     <View
@@ -83,6 +90,7 @@ export function GameMenu({
           <MenuRow icon="exit-outline" label={t("gameMenu.exit")} onPress={onExit} />
         </ScrollView>
       </View>
+      <Dialog visible={dialog !== null} request={dialog} onClose={() => setDialog(null)} />
     </View>
   );
 }
