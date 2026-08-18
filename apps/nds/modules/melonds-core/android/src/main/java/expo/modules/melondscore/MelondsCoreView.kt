@@ -10,18 +10,21 @@ import java.util.concurrent.CopyOnWriteArraySet
 
 /**
  * Hosts the SurfaceView melonDS blits into. The engine composites both DS
- * screens into one stacked 256x384 framebuffer, so this is a single surface
- * like the GBA app's: the compositor scales it to the SurfaceView bounds, and
- * this view aspect-fits those bounds inside itself, so the black bars are
- * simply this view's background.
+ * screens into one framebuffer — stacked 256x384, or side-by-side 512x192 when
+ * the `screenLayout` prop says "horizontal" — so this is a single surface like
+ * the GBA app's: the compositor scales it to the SurfaceView bounds, and this
+ * view aspect-fits those bounds inside itself, so the black bars are simply
+ * this view's background.
  *
  * Video only. Touch input is routed by the shared UI, which maps a touch into
- * bottom-screen pixels using the same aspect fit as onLayout below.
+ * bottom-screen pixels using the same aspect fit and screen arrangement as
+ * onLayout below.
  */
 class MelondsCoreView(context: Context, appContext: AppContext) :
   ExpoView(context, appContext), SurfaceHolder.Callback {
 
   private val surfaceView = SurfaceView(context)
+  private var sideBySide = false
 
   init {
     setBackgroundColor(Color.BLACK)
@@ -45,9 +48,9 @@ class MelondsCoreView(context: Context, appContext: AppContext) :
     if (width == 0 || height == 0) return
 
     val size = MelondsCoreNative.nativeGetVideoSize()
-    // Both screens stacked; the fallback matches what the engine will report.
-    val videoWidth = if (size[0] > 0) size[0] else 256
-    val videoHeight = if (size[1] > 0) size[1] else 384
+    // Pre-ROM fallback matches what the engine will report for this layout.
+    val videoWidth = if (size[0] > 0) size[0] else if (sideBySide) 512 else 256
+    val videoHeight = if (size[1] > 0) size[1] else if (sideBySide) 192 else 384
 
     // Largest aspect-correct rect that fits, centered.
     val scale = minOf(width.toFloat() / videoWidth, height.toFloat() / videoHeight)
@@ -61,6 +64,14 @@ class MelondsCoreView(context: Context, appContext: AppContext) :
       MeasureSpec.makeMeasureSpec(childHeight, MeasureSpec.EXACTLY),
     )
     surfaceView.layout(childLeft, childTop, childLeft + childWidth, childTop + childHeight)
+  }
+
+  /** Re-arranges the composited screens; the shared UI decides per orientation. */
+  fun setScreenLayout(horizontal: Boolean) {
+    if (sideBySide == horizontal) return
+    sideBySide = horizontal
+    MelondsCoreNative.nativeSetScreenLayout(horizontal)
+    requestLayout()
   }
 
   override fun surfaceCreated(holder: SurfaceHolder) {

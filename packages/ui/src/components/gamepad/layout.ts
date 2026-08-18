@@ -58,7 +58,11 @@ export interface EmulatorLayoutOptions {
   width: number;
   height: number;
   insets: Insets;
-  buttons: readonly EmulatorButton[];
+  /**
+   * The console being laid out: its buttons shape the pad, and in portrait its
+   * composited frame decides how much height the game area needs.
+   */
+  spec: ConsoleSpec;
   /**
    * The player's pad size for each orientation. Passed as a pair, not as one
    * number, because this function is the single place that decides which
@@ -96,16 +100,18 @@ const PORTRAIT_PAD_MAX_RATIO = 0.62;
  * no room for a band, and the game's 4:3-ish frame leaves wide empty margins to
  * put buttons in anyway. Portrait has the opposite problem: buttons over the
  * game would cover it, so the game takes the top and the pad gets its own band
- * underneath. The native view aspect-fits whatever rect it is given, so neither
- * case needs to know the console's screen dimensions.
+ * underneath. The native view aspect-fits whatever rect it is given, so
+ * landscape needs nothing from the console; portrait sizes its band around the
+ * console's frame, since there the band is what the game area is short of.
  */
 export function buildEmulatorLayout({
   width,
   height,
   insets,
-  buttons,
+  spec,
   scale,
 }: EmulatorLayoutOptions): EmulatorLayout {
+  const buttons = spec.buttons;
   if (width >= height) {
     const area: Rect = {
       x: insets.left,
@@ -123,12 +129,22 @@ export function buildEmulatorLayout({
 
   const usableWidth = width - insets.left - insets.right;
   const usableHeight = height - insets.top - insets.bottom;
+  const band = Math.min(
+    Math.max(usableWidth * PORTRAIT_PAD_RATIO, PORTRAIT_PAD_MIN_PX),
+    PORTRAIT_PAD_MAX_PX,
+    usableHeight * PORTRAIT_PAD_MAX_RATIO,
+  );
+  // A frame taller than it is wide — the DS/3DS screen stack — fits by height,
+  // so a game area wider than its aspect spends the difference on black gaps
+  // down both sides. The band above is derived from width alone and cannot see
+  // that, so here it gives back whatever height closes them. Only ever gives:
+  // the band never grows past what the pad asked for, and never shrinks below
+  // the floor that keeps it playable, so a gap can still remain. Wide-framed
+  // consoles (GB/GBA) need less height than is already free and are untouched.
+  const frame = stackedFrame(spec);
+  const heightToFillWidth = frame ? (usableWidth * frame.height) / frame.width : 0;
   const padHeight = Math.round(
-    Math.min(
-      Math.max(usableWidth * PORTRAIT_PAD_RATIO, PORTRAIT_PAD_MIN_PX),
-      PORTRAIT_PAD_MAX_PX,
-      usableHeight * PORTRAIT_PAD_MAX_RATIO,
-    ),
+    Math.min(band, Math.max(PORTRAIT_PAD_MIN_PX, usableHeight - heightToFillWidth)),
   );
   const padArea: Rect = {
     x: insets.left,
@@ -150,6 +166,29 @@ export function buildEmulatorLayout({
   };
 }
 
+/**
+ * The single framebuffer a core composites every screen into, top to bottom —
+ * as wide as the widest screen, as tall as all of them together. Null when the
+ * spec has no usable screens. `SlotSheet`'s thumbnail aspect makes the same
+ * assumption, so a core that composites differently must change both.
+ */
+function stackedFrame(spec: ConsoleSpec): { width: number; height: number } | null {
+  const width = Math.max(...spec.screens.map((s) => s.width));
+  const height = spec.screens.reduce((total, s) => total + s.height, 0);
+  return width > 0 && height > 0 ? { width, height } : null;
+}
+
+/**
+ * The same framebuffer with the screens left to right instead — what a
+ * multi-screen core composites when its view's `screenLayout` prop is
+ * "horizontal", which `EmulatorScreen` sets in landscape.
+ */
+function sideBySideFrame(spec: ConsoleSpec): { width: number; height: number } | null {
+  const width = spec.screens.reduce((total, s) => total + s.width, 0);
+  const height = Math.max(...spec.screens.map((s) => s.height));
+  return width > 0 && height > 0 ? { width, height } : null;
+}
+
 /** Where a console's touch screen ends up on the device, and how big it is natively. */
 export interface TouchScreenRect {
   /** Absolute screen coordinates, comparable with touch `pageX`/`pageY`. */
@@ -166,33 +205,53 @@ export interface TouchScreenRect {
  * This is the one place layout code needs the console's pixel dimensions, and
  * it is unavoidable: the native view aspect-fits the whole composited
  * framebuffer inside its rect and centres it, so only the same arithmetic can
- * say where one of the stacked screens landed. Cores composite every screen
- * into one framebuffer top to bottom — the same assumption `SlotSheet`'s
- * thumbnail aspect makes — so a core that composites differently must change
- * both.
+ * say where one of the composited screens landed. `orientation` picks the
+ * arrangement — side by side in landscape, stacked otherwise — and must be the
+ * layout's own, the same one `EmulatorScreen` turns into the view's
+ * `screenLayout` prop, or the two disagree about where the bottom screen is.
  */
-export function touchScreenRect(screen: Rect, spec: ConsoleSpec): TouchScreenRect | null {
+export function touchScreenRect(
+  screen: Rect,
+  spec: ConsoleSpec,
+  orientation: Orientation,
+): TouchScreenRect | null {
   const index = spec.touchScreen;
   if (index === null || index < 0 || index >= spec.screens.length) return null;
 
-  const stackedWidth = Math.max(...spec.screens.map((s) => s.width));
-  const stackedHeight = spec.screens.reduce((total, s) => total + s.height, 0);
-  if (stackedWidth <= 0 || stackedHeight <= 0) return null;
+  const sideBySide = orientation === "landscape" && spec.screens.length > 1;
+  const frame = sideBySide ? sideBySideFrame(spec) : stackedFrame(spec);
+  if (!frame) return null;
 
-  const scale = Math.min(screen.width / stackedWidth, screen.height / stackedHeight);
+  const scale = Math.min(screen.width / frame.width, screen.height / frame.height);
   if (!(scale > 0)) return null;
 
-  const left = screen.x + (screen.width - stackedWidth * scale) / 2;
-  const top = screen.y + (screen.height - stackedHeight * scale) / 2;
+  const left = screen.x + (screen.width - frame.width * scale) / 2;
+  const top = screen.y + (screen.height - frame.height * scale) / 2;
 
   const target = spec.screens[index];
-  const above = spec.screens.slice(0, index).reduce((total, s) => total + s.height, 0);
 
+  if (sideBySide) {
+    const before = spec.screens.slice(0, index).reduce((total, s) => total + s.width, 0);
+    return {
+      rect: {
+        x: left + before * scale,
+        // A screen shorter than the tallest is centred in the row, which is
+        // what compositing them into one framebuffer implies.
+        y: top + ((frame.height - target.height) / 2) * scale,
+        width: target.width * scale,
+        height: target.height * scale,
+      },
+      width: target.width,
+      height: target.height,
+    };
+  }
+
+  const above = spec.screens.slice(0, index).reduce((total, s) => total + s.height, 0);
   return {
     rect: {
       // A screen narrower than the widest is centred in the stack, which is
       // what compositing them into one framebuffer implies.
-      x: left + ((stackedWidth - target.width) / 2) * scale,
+      x: left + ((frame.width - target.width) / 2) * scale,
       y: top + above * scale,
       width: target.width * scale,
       height: target.height * scale,
@@ -324,6 +383,7 @@ function padMetrics(area: Rect, buttons: readonly EmulatorButton[], scale: numbe
   const bottom = area.y + area.height;
   const centerX = area.x + area.width / 2;
   const usableHeight = area.height;
+  const usableWidth = area.width;
 
   // Deliberately outside `scale`: buttons stay pinned to the pad area's outer
   // edges and grow inward, so a larger pad never reaches past the rect it was
@@ -340,25 +400,53 @@ function padMetrics(area: Rect, buttons: readonly EmulatorButton[], scale: numbe
   //
   // `scale` multiplies each finished size — the cap included, or growing would
   // do nothing in landscape, where the cap is what binds.
+  //
+  // The D-pad and the face cluster carry a third, width-derived cap. They are
+  // the two things that grow toward each other along the bottom, and a band on
+  // a narrow phone runs them together before either height term binds. It is a
+  // cap, not a source: both fractions are loose enough that it stays out of the
+  // way from about 350dp up, and a landscape area is far too wide to ever reach
+  // it, so the orientation split above is unchanged.
 
   const shoulderWidth = Math.round(Math.min(usableHeight * 0.22, 124) * scale);
   const shoulderHeight = Math.round(Math.min(usableHeight * 0.13, 64) * scale);
   // ZL/ZR sit just inboard of L/R.
   const zGap = shoulderWidth + 12;
 
-  const faceSize = Math.round(Math.min(usableHeight * 0.2, 68) * scale);
-  const faceGap = Math.round(faceSize * 0.28);
-  // Cluster radius from its centre to a button centre.
-  const spread = faceSize / 2 + faceGap / 2;
-  const clusterCx = right - margin - faceSize - spread * 0.4;
-  const clusterCy = bottom - margin - faceSize / 2 - spread * 0.6;
-  // The diamond's top button sits a full radius up; the GB/GBA pair only 0.45.
+  // 0.26/0.54, not the 0.2/0.5 these shipped with: the portrait band no longer
+  // gets a share of the window, it gets whatever the game area can spare, so on
+  // most phones it now sits at `PORTRAIT_PAD_MIN_PX`. At that height the old
+  // fractions landed well under the caps and the two controls the thumbs
+  // actually live on came out visibly small; these reach the caps at a floor-
+  // height band. Taller bands were already cap-bound and do not move.
   const diamond = has("x") || has("y");
-  const faceTop = clusterCy - spread * (diamond ? 1 : 0.45) - faceSize / 2;
-  // Likewise the far side of the cluster, which is what the D-pad grows toward.
-  const faceLeft = clusterCx - spread * (diamond ? 1 : 0.75) - faceSize / 2;
+  // The four-button diamond runs 10% smaller than the GB/GBA pair — four
+  // buttons at the pair's size read oversized and crowd the cluster.
+  const faceSize = Math.round(
+    Math.min(usableHeight * 0.26, 68, usableWidth * 0.19) * (diamond ? 0.9 : 1) * scale,
+  );
+  const faceGap = Math.round(faceSize * 0.28);
+  // Cluster radius from its centre to a button centre. Which pair `faceGap` has
+  // to separate depends on the shape: the GB/GBA pair faces across the centre,
+  // two radii apart, while the diamond's nearest neighbours sit diagonally, a
+  // further sqrt(2) out. Sizing the diamond as if they were collinear is what
+  // left X/Y/A/B overlapping. Half a gap across that diagonal is as much as a
+  // 360dp-wide phone can give four buttons before the cluster meets the D-pad.
+  const spread = diamond ? (faceSize + faceGap / 2) / Math.SQRT2 : (faceSize + faceGap) / 2;
+  // Half the cluster's own extent: the diamond's top and left buttons sit a
+  // full radius out, the GB/GBA pair only 0.45 and 0.75 of one.
+  const halfHeight = spread * (diamond ? 1 : 0.45) + faceSize / 2;
+  const halfWidth = spread * (diamond ? 1 : 0.75) + faceSize / 2;
+  const clusterCx = right - margin - faceSize - spread * 0.4;
+  // The cluster hangs below the D-pad's bottom line, on the lower arc a thumb
+  // reaches it along — but never past the margin, which the taller diamond
+  // would otherwise push its bottom button through.
+  const clusterCy = bottom - margin - Math.max(faceSize / 2 + spread * 0.6, halfHeight);
+  const faceTop = clusterCy - halfHeight;
+  // The far side of the cluster, which is what the D-pad grows toward.
+  const faceLeft = clusterCx - halfWidth;
 
-  const dpadSize = Math.round(Math.min(usableHeight * 0.5, 150) * scale);
+  const dpadSize = Math.round(Math.min(usableHeight * 0.54, 150, usableWidth * 0.42) * scale);
   const dpadVisual: Rect = {
     x: left + margin,
     y: bottom - margin - dpadSize,
@@ -370,10 +458,11 @@ function padMetrics(area: Rect, buttons: readonly EmulatorButton[], scale: numbe
   const smallHeight = Math.round(Math.min(usableHeight * 0.1, 28) * scale);
   const smallGap = 8;
   const menuSize = Math.round(Math.min(usableHeight * 0.12, 36) * scale);
-  // The menu sits between Select and Start, so its gap has to clear both
-  // neighbours' hit slop as well: overlapping slop there would pause the game
-  // on a mistimed Start.
-  const menuGap = smallGap + HIT_SLOP * 2;
+  // The menu sits between Select and Start; the gap keeps each neighbour's
+  // hit slop off the other's visual. The slops may still meet between the
+  // buttons — region order (pills first) gives that tie to the game button,
+  // so a mistimed Start cannot pause the game.
+  const menuGap = smallGap + HIT_SLOP;
   const rowHalfWidth = menuSize / 2 + menuGap + smallWidth;
   // A landscape pad is wide enough to sit the Select/Menu/Start row between the
   // D-pad and the face cluster along the bottom. A portrait band is not: there
@@ -384,31 +473,53 @@ function padMetrics(area: Rect, buttons: readonly EmulatorButton[], scale: numbe
     centerX - rowHalfWidth > dpadVisual.x + dpadSize + smallGap &&
     centerX + rowHalfWidth < clusterCx - spread - faceSize / 2 - smallGap;
   const smallY = rowFits ? bottom - margin - smallHeight : top + margin;
-  // The menu is taller than the pills and centred on them, so it — not the
-  // pills — is the row's real bottom edge.
-  const rowBottom = smallY + Math.max(smallHeight, (smallHeight + menuSize) / 2);
+  // In a portrait band L/R join the Select/Menu/Start row at the band's
+  // edges instead of taking a row of their own — the band is short, and the
+  // top edge is where the least-pressed buttons belong. Only without ZL/ZR:
+  // four shoulders cannot fit around the row.
+  const shouldersInRow = !rowFits && (has("l") || has("r")) && !has("zl") && !has("zr");
+  // Clamped so an in-row shoulder can never run into the row's pills on a
+  // narrow band; everywhere else the stock width stands.
+  const rowShoulderWidth = shouldersInRow
+    ? Math.min(shoulderWidth, Math.floor(centerX - rowHalfWidth - smallGap - left - margin))
+    : shoulderWidth;
+  // The menu is taller than the pills and centred on them — and so are the
+  // in-row shoulders — so the tallest of them is the row's real bottom edge.
+  const rowBottom =
+    smallY +
+    Math.max(
+      smallHeight,
+      (smallHeight + menuSize) / 2,
+      shouldersInRow ? (smallHeight + shoulderHeight) / 2 : 0,
+    );
 
-  // Shoulders ride just above whichever of the D-pad and the face cluster
-  // reaches highest, so they stay within a thumb's roll of the controls the
-  // hands are already on rather than stranded in the empty top corners. In
-  // portrait that lands them exactly where the Select row used to sit; the
-  // floor keeps them clear of the row that has since moved up there.
+  // A landscape pad pins the shoulders to the top edge, where the console
+  // itself carries them and where the hands already grip the device. A
+  // portrait band has no edge to spare: L/R alone join the Select/Menu/Start
+  // row there (`shouldersInRow`, centred on the pills like the menu is), and a
+  // full set of four rides just above whichever of the D-pad and the face
+  // cluster reaches highest, staying within a thumb's roll of the controls the
+  // hands are on rather than stranded above the row.
   const shoulderMinY = rowFits ? top + margin : rowBottom + smallGap;
-  const shoulderY = Math.round(
-    Math.max(shoulderMinY, Math.min(dpadVisual.y, faceTop) - margin - shoulderHeight),
-  );
+  const shoulderY = shouldersInRow
+    ? Math.round(smallY + (smallHeight - shoulderHeight) / 2)
+    : rowFits
+      ? Math.round(shoulderMinY)
+      : Math.round(
+          Math.max(shoulderMinY, Math.min(dpadVisual.y, faceTop) - margin - shoulderHeight),
+        );
 
   // Whether this scale actually fits, in the three ways a bigger pad runs out
   // of room. Vertically the top stack — the shoulders, or the Select row once
   // it has moved up there — has to stay clear of whichever of the D-pad and
-  // the face cluster reaches highest; at the stock size the `Math.max` above
-  // absorbs that collision silently, so this is the same condition stated
-  // positively.
+  // the face cluster reaches highest. `shoulderMinY` is the highest that stack
+  // can sit, so testing it tests the best case the placement above can offer.
   const ceiling = Math.min(dpadVisual.y, faceTop);
   const hasShoulders = has("l") || has("r") || has("zl") || has("zr");
-  const stackCollides = hasShoulders
-    ? shoulderMinY + shoulderHeight + margin > ceiling
-    : !rowFits && rowBottom + smallGap > ceiling;
+  const stackCollides =
+    hasShoulders && !shouldersInRow
+      ? shoulderMinY + shoulderHeight + margin > ceiling
+      : !rowFits && rowBottom + smallGap > ceiling;
   // Horizontally there are two, both only reachable in a portrait band: the
   // D-pad and the face cluster grow toward each other along the bottom, and
   // ZL/ZR grow toward each other in the middle of the shoulder row. Neither
@@ -430,7 +541,7 @@ function padMetrics(area: Rect, buttons: readonly EmulatorButton[], scale: numbe
     right,
     centerX,
     margin,
-    shoulderWidth,
+    shoulderWidth: rowShoulderWidth,
     shoulderHeight,
     shoulderY,
     zGap,

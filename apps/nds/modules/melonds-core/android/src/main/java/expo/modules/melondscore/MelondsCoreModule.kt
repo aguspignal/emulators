@@ -252,6 +252,12 @@ class MelondsCoreModule : Module() {
       currentRom = null
     }
 
-    View(MelondsCoreView::class) {}
+    View(MelondsCoreView::class) {
+      // "horizontal" puts the two screens side by side (landscape); anything
+      // else stacks them. The shared EmulatorScreen sets it per orientation.
+      Prop("screenLayout") { view: MelondsCoreView, layout: String? ->
+        view.setScreenLayout(layout == "horizontal")
+      }
+    }
   }
 }

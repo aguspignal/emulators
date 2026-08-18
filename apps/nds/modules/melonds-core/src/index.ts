@@ -34,7 +34,9 @@ declare class MelondsCoreNativeModule extends NativeModule<NativeEvents> {
 const native = requireNativeModule<MelondsCoreNativeModule>('MelondsCore');
 
 /** The view melonDS renders both DS screens into. */
-export const EmulatorView = requireNativeView<ViewProps>('MelondsCore');
+export const EmulatorView = requireNativeView<
+  ViewProps & { screenLayout?: 'vertical' | 'horizontal' }
+>('MelondsCore');
 
 /** melonDS core, exposed through the shared @emulators/core-interface contract. */
 export const core: EmulatorCore = {

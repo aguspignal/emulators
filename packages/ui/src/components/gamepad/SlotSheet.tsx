@@ -37,7 +37,13 @@ interface SlotEntry {
   saved: SaveStateRow | null;
 }
 
-const THUMB_HEIGHT = 48;
+/**
+ * The thumbnail's shorter side; the longer one follows the console's aspect.
+ * Fixing the shorter side rather than the height is what keeps a two-screen
+ * console — whose composited frame is taller than it is wide — from being
+ * squeezed into a sliver beside the row's two lines of text.
+ */
+const THUMB_SHORT_SIDE = 48;
 /** Slot 0 belongs to the automatic save; the rest are the player's. */
 const USER_SLOTS = Array.from({ length: SAVESTATE_SLOTS - 1 }, (_, index) => index + 1);
 
@@ -138,7 +144,7 @@ export function SlotSheet({ mode, romId, spec, onPick, onBack }: SlotSheetProps)
     entries.push({ slot, label: t('slots.slot', { number: slot }), saved: bySlot.get(slot) ?? null });
   }
 
-  const thumbWidth = Math.round(THUMB_HEIGHT * thumbAspect(spec));
+  const thumb = thumbSize(spec);
   const anySaved = entries.some((entry) => entry.saved);
 
   return (
@@ -164,7 +170,7 @@ export function SlotSheet({ mode, romId, spec, onPick, onBack }: SlotSheetProps)
                   disabled && styles.rowDisabled,
                 ]}
               >
-                <View style={[styles.thumb, { width: thumbWidth }]}>
+                <View style={[styles.thumb, thumb]}>
                   {item.saved && (
                     <Image
                       source={{ uri: stateThumbUri(romId, item.slot, item.saved.saved_at) }}
@@ -196,10 +202,13 @@ export function SlotSheet({ mode, romId, spec, onPick, onBack }: SlotSheetProps)
 }
 
 /** Cores draw every screen into one framebuffer, stacked top to bottom. */
-function thumbAspect(spec: ConsoleSpec): number {
+function thumbSize(spec: ConsoleSpec): { width: number; height: number } {
   const width = Math.max(...spec.screens.map((screen) => screen.width));
   const height = spec.screens.reduce((total, screen) => total + screen.height, 0);
-  return height > 0 ? width / height : 1;
+  const aspect = height > 0 ? width / height : 1;
+  return aspect >= 1
+    ? { width: Math.round(THUMB_SHORT_SIDE * aspect), height: THUMB_SHORT_SIDE }
+    : { width: THUMB_SHORT_SIDE, height: Math.round(THUMB_SHORT_SIDE / aspect) };
 }
 
 const styles = StyleSheet.create({
@@ -242,7 +251,6 @@ const styles = StyleSheet.create({
   rowPressed: { opacity: 0.6 },
   rowDisabled: { opacity: 0.35 },
   thumb: {
-    height: THUMB_HEIGHT,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,

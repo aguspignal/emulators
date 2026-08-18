@@ -57,6 +57,8 @@ object MelondsCoreNative {
   external fun nativeReset()
   external fun nativeGetGameTitle(): String
   external fun nativeGetVideoSize(): IntArray
+  /** true composites the screens side by side (512x192), false stacked (256x384). */
+  external fun nativeSetScreenLayout(sideBySide: Boolean)
   external fun nativeSetKeys(keys: Int)
   /** Bottom-screen native pixels: x in 0..255, y in 0..191. */
   external fun nativeSetTouch(x: Int, y: Int, down: Boolean)
