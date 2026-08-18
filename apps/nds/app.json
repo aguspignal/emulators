@@ -3,9 +3,7 @@
     "name": "NDS Emulator",
     "slug": "nds",
     "version": "1.1.0",
-    "platforms": [
-      "android"
-    ],
+    "platforms": ["android"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -41,6 +39,14 @@
                 ]
               }
             ]
+          }
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true
           }
         }
       ]

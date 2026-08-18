@@ -11,6 +11,25 @@ android {
   defaultConfig {
     versionCode 1
     versionName "0.1.0"
+    externalNativeBuild {
+      cmake {
+        // c++_shared: melonDS is C++ and the RN app already ships
+        // libc++_shared.so; the Oboe prefab (added with audio) also needs it.
+        // CMAKE_POLICY_VERSION_MINIMUM: keeps CMake >= 4 from rejecting the
+        // older cmake_minimum_required() that melonDS and teakra declare.
+        arguments "-DANDROID_STL=c++_shared",
+                  "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+      }
+    }
+    ndk {
+      abiFilters "arm64-v8a", "x86_64"
+    }
+  }
+  externalNativeBuild {
+    cmake {
+      path "src/main/cpp/CMakeLists.txt"
+      version "3.22.1"
+    }
   }
   lintOptions {
     abortOnError false
