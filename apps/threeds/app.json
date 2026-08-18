@@ -3,9 +3,7 @@
     "name": "3DS Emulator",
     "slug": "threeds",
     "version": "1.1.0",
-    "platforms": [
-      "android"
-    ],
+    "platforms": ["android"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -22,6 +20,14 @@
     "plugins": [
       "expo-sqlite",
       "expo-localization",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true
+          }
+        }
+      ],
       [
         "expo-font",
         {
