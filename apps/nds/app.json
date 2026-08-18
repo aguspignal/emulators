@@ -9,12 +9,6 @@
     "userInterfaceStyle": "dark",
     "android": {
       "package": "com.aguspignal.nds",
-      "adaptiveIcon": {
-        "backgroundColor": "#101014",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      },
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
@@ -28,14 +22,23 @@
               {
                 "fontFamily": "Tourney",
                 "fontDefinitions": [
-                  { "path": "../../packages/ui/assets/fonts/Tourney-Black.ttf", "weight": 900 }
+                  {
+                    "path": "../../packages/ui/assets/fonts/Tourney-Black.ttf",
+                    "weight": 900
+                  }
                 ]
               },
               {
                 "fontFamily": "Roboto",
                 "fontDefinitions": [
-                  { "path": "../../packages/ui/assets/fonts/Roboto-Regular.ttf", "weight": 400 },
-                  { "path": "../../packages/ui/assets/fonts/Roboto-SemiBold.ttf", "weight": 600 }
+                  {
+                    "path": "../../packages/ui/assets/fonts/Roboto-Regular.ttf",
+                    "weight": 400
+                  },
+                  {
+                    "path": "../../packages/ui/assets/fonts/Roboto-SemiBold.ttf",
+                    "weight": 600
+                  }
                 ]
               }
             ]
@@ -49,7 +52,24 @@
             "enableMinifyInReleaseBuilds": true
           }
         }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1c1c22",
+          "image": "./assets/splash-icon.png",
+          "dark": {
+            "image": "./assets/splash-icon-dark.png",
+            "backgroundColor": "#1c1c22"
+          },
+          "imageWidth": 200
+        }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "46a775ea-8a2b-44a3-b948-e6025307bcc2"
+      }
+    }
   }
 }

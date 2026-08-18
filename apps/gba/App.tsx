@@ -18,7 +18,7 @@ const config: AppConfig = {
   // Mirrors `version` in app.json — edit both together.
   version: "1.1.0",
   termsUrl: "https://sites.google.com/view/gbaemulator-terms",
-  privacyUrl: "https://sites.google.com/view/gbaemulator-privacy",
+  privacyUrl: "https://sites.google.com/view/emulator-privacy",
   coverIndexes: [
     { console: "gba", source: GBA_COVERS },
     { console: "gbc", source: GBC_COVERS },
