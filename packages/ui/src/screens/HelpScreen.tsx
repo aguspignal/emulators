@@ -2,7 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScrollView, StyleSheet, Text, View, type ViewStyle } from "react-native";
 import { useTranslation } from "react-i18next";
 import { acceptedExtensions } from "@emulators/storage";
-import { useAppConfig } from "../config";
+import { useAppConfig, usePrimaryColor } from "../config";
 import { colors, radius, spacing, typography } from "../theme";
 
 /**
@@ -78,9 +78,11 @@ function Step({
   options?: string[];
   last?: boolean;
 }) {
+  const primary = usePrimaryColor();
+
   return (
     <View style={[styles.step, !last && styles.rowDivided]}>
-      <View style={styles.badge}>
+      <View style={[styles.badge, { backgroundColor: primary }]}>
         <Text style={styles.badgeText}>{number}</Text>
       </View>
       {/* Translated sentences stay on the body face: the display family is
@@ -135,7 +137,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },

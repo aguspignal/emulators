@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors, spacing, typography } from "../../theme";
 import { Dialog, type DialogRequest } from "../Dialog";
+import { usePrimaryColor } from "../../config";
 
 export interface GameMenuProps {
   title: string;
@@ -86,7 +87,12 @@ export function GameMenu({
             toggled={fastForward}
           />
           <MenuRow icon="code-slash-outline" label={t("gameMenu.cheats")} onPress={notAvailable} />
-          <MenuRow icon="refresh-outline" label={t("gameMenu.reset")} onPress={confirmReset} danger />
+          <MenuRow
+            icon="refresh-outline"
+            label={t("gameMenu.reset")}
+            onPress={confirmReset}
+            danger
+          />
           <MenuRow icon="exit-outline" label={t("gameMenu.exit")} onPress={onExit} />
         </ScrollView>
       </View>
@@ -109,6 +115,8 @@ function MenuRow({
   /** When set, the row is a toggle and shows a switch reflecting this value. */
   toggled?: boolean;
 }) {
+  const primary = usePrimaryColor();
+
   return (
     <Pressable
       accessibilityRole={toggled === undefined ? "button" : "switch"}
@@ -124,7 +132,7 @@ function MenuRow({
         <View pointerEvents="none" style={styles.rowSwitch}>
           <Switch
             value={toggled}
-            trackColor={{ false: colors.border, true: colors.primary }}
+            trackColor={{ false: colors.border, true: primary }}
             thumbColor={colors.text}
           />
         </View>

@@ -14,7 +14,7 @@ android {
     externalNativeBuild {
       cmake {
         // c++_shared: melonDS is C++ and the RN app already ships
-        // libc++_shared.so; the Oboe prefab (added with audio) also needs it.
+        // libc++_shared.so; the Oboe prefab package also rejects c++_static.
         // CMAKE_POLICY_VERSION_MINIMUM: keeps CMake >= 4 from rejecting the
         // older cmake_minimum_required() that melonDS and teakra declare.
         arguments "-DANDROID_STL=c++_shared",
@@ -24,6 +24,7 @@ android {
     ndk {
       abiFilters "arm64-v8a", "x86_64"
     }
+    consumerProguardFiles "consumer-rules.pro"
   }
   externalNativeBuild {
     cmake {
@@ -31,7 +32,15 @@ android {
       version "3.22.1"
     }
   }
+  // Lets find_package(oboe CONFIG) resolve the Oboe AAR's bundled CMake package.
+  buildFeatures {
+    prefab true
+  }
   lintOptions {
     abortOnError false
   }
+}
+
+dependencies {
+  implementation "com.google.oboe:oboe:1.9.3"
 }

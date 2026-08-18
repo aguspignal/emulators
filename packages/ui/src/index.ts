@@ -29,7 +29,13 @@ export { SlotSheet } from './components/gamepad/SlotSheet';
 export type { SlotSheetProps } from './components/gamepad/SlotSheet';
 export { SecondaryButton } from './components/gamepad/SecondaryButton';
 export type { SecondaryButtonProps } from './components/gamepad/SecondaryButton';
-export { buildGamepadLayout, buildEmulatorLayout, fittingScale } from './components/gamepad/layout';
+export {
+  buildGamepadLayout,
+  buildEmulatorLayout,
+  fittingScale,
+  touchScreenRect,
+  toTouchPoint,
+} from './components/gamepad/layout';
 export type {
   EmulatorLayout,
   EmulatorLayoutOptions,
@@ -38,6 +44,7 @@ export type {
   Orientation,
   Rect,
   Region,
+  TouchScreenRect,
 } from './components/gamepad/layout';
 export { useEmulatorLayout } from './components/gamepad/useEmulatorLayout';
 export { useRoms } from './storage/useRoms';

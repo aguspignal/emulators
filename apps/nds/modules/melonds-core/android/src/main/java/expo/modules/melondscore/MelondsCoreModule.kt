@@ -1,94 +1,257 @@
 package expo.modules.melondscore
 
+import android.graphics.Bitmap
 import android.net.Uri
-import android.util.Log
+import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
-import java.io.FileInputStream
-import java.io.InputStream
-import java.security.MessageDigest
+import java.io.FileOutputStream
 
-// Stub implementation of the @emulators/core-interface contract.
-// TODO: bridge these calls into melonDS (C++ core via JNI).
+private class RomLoadException(uri: String, cause: Throwable? = null) :
+  CodedException("ERR_ROM_LOAD", "Failed to load ROM from $uri", cause)
+
+private class NoRomLoadedException :
+  CodedException("ERR_NO_ROM", "No ROM is loaded", null)
+
+private class SaveStateException(slot: Int, loading: Boolean) :
+  CodedException(
+    "ERR_SAVESTATE",
+    "Failed to ${if (loading) "load" else "save"} state in slot $slot",
+    null,
+  )
+
+private class ScreenshotException(reason: String, cause: Throwable? = null) :
+  CodedException("ERR_SCREENSHOT", "Failed to capture a screenshot: $reason", cause)
+
+private class SaveDataException(reason: String) :
+  CodedException("ERR_SAVE_DATA", "Failed to delete save data: $reason", null)
+
+/** The only shape a ROM hash may have; anything else is a path-traversal risk. */
+private val SHA1_PATTERN = Regex("^[0-9a-f]{40}$")
+
+// Implements the @emulators/core-interface contract on top of the native
+// melonDS engine (modules/melonds-core/android/src/main/cpp). This class owns
+// the idle/running/paused state machine; the engine just obeys.
 class MelondsCoreModule : Module() {
+  @Volatile
+  private var state = "idle"
+
+  @Volatile
+  private var currentRom: ResolvedRom? = null
+
+  /** Set only when the activity lifecycle paused a running game, so only such a game resumes. */
+  @Volatile
+  private var resumeOnForeground = false
+
   private val context
     get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+
+  private fun setState(next: String) {
+    if (state != next) {
+      state = next
+      sendEvent("stateChange", mapOf("state" to next))
+    }
+  }
+
+  private fun emitError(message: String) {
+    sendEvent("error", mapOf("message" to message))
+  }
 
   override fun definition() = ModuleDefinition {
     Name("MelondsCore")
 
     Events("stateChange", "error")
 
-    // Bring-up probe: touching MelondsCoreNative loads libmelonds-jni and calls
-    // into the linked melonDS core, logging its version (or the load failure) to
-    // logcat. Confirms the native build end to end; remove once real methods
-    // call into the core.
+    // melonDS resolves its "local" files (BIOS, firmware, the ROM list) against
+    // a working directory. This build supplies none of them, but the path still
+    // has to land somewhere writable rather than in the process CWD.
     OnCreate {
-      try {
-        Log.i("MelondsCore", "melonDS core ${MelondsCoreNative.nativeGetCoreVersion()}")
-      } catch (e: Throwable) {
-        Log.e("MelondsCore", "libmelonds-jni failed to load", e)
+      appContext.reactContext?.let {
+        MelondsCoreNative.nativeSetLocalDir(RomFiles.localDir(it))
       }
     }
 
+    // AsyncFunctions run on the module's background dispatcher, so blocking
+    // on file copies and emu-thread futures here is fine.
     AsyncFunction("loadRom") { uri: String ->
+      val rom = try {
+        RomFiles.resolve(context, uri)
+      } catch (e: Exception) {
+        emitError("Could not read ROM: ${e.message}")
+        throw RomLoadException(uri, e)
+      }
+      if (!MelondsCoreNative.nativeLoadRom(rom.path, RomFiles.savPath(context, rom.sha1))) {
+        emitError("melonDS could not load this ROM")
+        throw RomLoadException(uri)
+      }
+      currentRom = rom
+      resumeOnForeground = false
+      MelondsCoreNative.clearKeys()
+      setState("paused") // contract: paused at frame 0; start() begins from here
+      MelondsCoreView.refreshAllLayouts()
+
       mapOf(
-        "title" to uri.substringAfterLast('/'),
+        "title" to MelondsCoreNative.nativeGetGameTitle().ifBlank { rom.fallbackTitle },
+        // One console per app here, so there is no header sniffing to do.
         "console" to "nds",
-        "size" to 0,
-        // Hashed for real even though nothing emulates yet: the library stores
-        // this per ROM, and a missing key would arrive in JS as `undefined`,
-        // which SQLite refuses to bind.
-        "sha1" to sha1Of(uri),
+        "size" to rom.size,
+        "sha1" to rom.sha1,
       )
     }
 
-    AsyncFunction("unloadRom") {}
+    AsyncFunction("unloadRom") {
+      MelondsCoreNative.nativeUnloadRom()
+      MelondsCoreNative.clearKeys()
+      currentRom = null
+      resumeOnForeground = false
+      setState("idle")
+    }
 
-    Function("start") {}
-    Function("pause") {}
-    Function("resume") {}
-    Function("reset") {}
+    Function("start") {
+      if (state == "paused") {
+        MelondsCoreNative.nativeSetPaused(false)
+        setState("running")
+      }
+    }
 
-    Function("getState") { "idle" }
+    Function("pause") {
+      if (state == "running") {
+        MelondsCoreNative.nativeSetPaused(true)
+        setState("paused")
+        resumeOnForeground = false // an explicit pause outlives a trip to the background
+      }
+    }
 
-    Function("setButton") { button: String, pressed: Boolean -> }
-    Function("setTouch") { x: Double, y: Double, pressed: Boolean -> }
+    Function("resume") {
+      if (state == "paused") {
+        MelondsCoreNative.nativeSetPaused(false)
+        setState("running")
+      }
+    }
 
-    AsyncFunction("saveState") { slot: Int -> }
-    AsyncFunction("loadState") { slot: Int -> }
-    AsyncFunction("deleteState") { slot: Int -> }
-    AsyncFunction("deleteSaveData") { sha1: String -> }
-    AsyncFunction("captureScreenshot") { uri: String -> }
+    Function("reset") {
+      MelondsCoreNative.nativeReset()
+    }
 
-    Function("setVolume") { volume: Double -> }
-    Function("setSpeed") { multiplier: Double -> }
+    Function("getState") { state }
+
+    // The emulation thread and the audio stream are native: without this they
+    // keep running (and playing) with the app backgrounded or the screen off,
+    // whatever JS does. Fires on the activity's onPause/onResume, so it also
+    // covers the screen simply being switched off. The shared UI pauses on
+    // AppState too; both paths are guarded on `state`, so they can't fight.
+    OnActivityEntersBackground {
+      if (state == "running") {
+        MelondsCoreNative.nativeSetPaused(true)
+        setState("paused")
+        resumeOnForeground = true
+      }
+      // A paused game runs no frames, and the engine only writes the battery
+      // save out from a running frame — so an in-game save made just before
+      // switching away would sit in memory until the process is killed.
+      if (currentRom != null) {
+        MelondsCoreNative.nativeFlushSaves()
+      }
+    }
+
+    OnActivityEntersForeground {
+      if (resumeOnForeground) {
+        resumeOnForeground = false
+        if (state == "paused") {
+          MelondsCoreNative.nativeSetPaused(false)
+          setState("running")
+        }
+      }
+    }
+
+    Function("setButton") { button: String, pressed: Boolean ->
+      MelondsCoreNative.updateKey(button, pressed)
+    }
+
+    // Coordinates arrive already mapped into bottom-screen native pixels by the
+    // shared UI, which aspect-fits the stacked framebuffer the same way the
+    // native view does.
+    Function("setTouch") { x: Double, y: Double, pressed: Boolean ->
+      MelondsCoreNative.nativeSetTouch(x.toInt(), y.toInt(), pressed)
+    }
+
+    AsyncFunction("saveState") { slot: Int ->
+      val rom = currentRom ?: throw NoRomLoadedException()
+      if (!MelondsCoreNative.nativeSaveState(RomFiles.statePath(context, rom.sha1, slot))) {
+        throw SaveStateException(slot, loading = false)
+      }
+    }
+
+    AsyncFunction("loadState") { slot: Int ->
+      val rom = currentRom ?: throw NoRomLoadedException()
+      if (!MelondsCoreNative.nativeLoadState(RomFiles.statePath(context, rom.sha1, slot))) {
+        throw SaveStateException(slot, loading = true)
+      }
+    }
+
+    AsyncFunction("deleteState") { slot: Int ->
+      val rom = currentRom ?: throw NoRomLoadedException()
+      File(RomFiles.statePath(context, rom.sha1, slot)).delete() // absent slot: fine
+    }
+
+    // Takes the hash instead of acting on the loaded ROM: the library deletes
+    // saves for a ROM it is removing, which by definition isn't playing.
+    AsyncFunction("deleteSaveData") { sha1: String ->
+      if (!SHA1_PATTERN.matches(sha1)) {
+        throw SaveDataException("'$sha1' is not a ROM hash")
+      }
+      if (currentRom?.sha1 == sha1) {
+        throw SaveDataException("that ROM is loaded")
+      }
+      RomFiles.deleteSaveData(context, sha1)
+    }
+
+    // Encodes the frame natively and writes it where the caller asked; pixels
+    // never reach JS. The frame is both screens stacked, which is the aspect
+    // ratio SlotSheet's thumbnails already assume.
+    AsyncFunction("captureScreenshot") { uri: String ->
+      val parsed = Uri.parse(uri)
+      val path = when (parsed.scheme) {
+        null, "", "file" -> parsed.path ?: uri
+        else -> throw ScreenshotException("unsupported URI scheme ${parsed.scheme}")
+      }
+      val frame = MelondsCoreNative.nativeCaptureFrame() ?: throw NoRomLoadedException()
+      val width = frame[0]
+      val height = frame[1]
+      if (width <= 0 || height <= 0) {
+        throw ScreenshotException("empty frame")
+      }
+      // Reads the pixels straight out of the JNI array, past the two dimensions.
+      val bitmap = Bitmap.createBitmap(frame, 2, width, width, height, Bitmap.Config.ARGB_8888)
+      try {
+        val file = File(path)
+        file.parentFile?.mkdirs()
+        FileOutputStream(file).use { out -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out) }
+      } catch (e: Exception) {
+        throw ScreenshotException("could not write $path", e)
+      } finally {
+        bitmap.recycle()
+      }
+    }
+
+    Function("setVolume") { volume: Double ->
+      MelondsCoreNative.nativeSetVolume(volume.coerceIn(0.0, 1.0).toFloat())
+    }
+
+    Function("setSpeed") { multiplier: Double ->
+      MelondsCoreNative.nativeSetSpeed(multiplier.toFloat())
+    }
+
+    // Last resort: JS normally unloads on unmount, but a dev reload or an
+    // activity teardown can skip that, and unloadRom is what commits the
+    // battery save. Idempotent when nothing is loaded.
+    OnDestroy {
+      MelondsCoreNative.nativeUnloadRom()
+      currentRom = null
+    }
 
     View(MelondsCoreView::class) {}
-  }
-
-  /** Empty string when the ROM can't be read — the contract allows that. */
-  private fun sha1Of(uri: String): String {
-    return try {
-      val parsed = Uri.parse(uri)
-      val stream: InputStream = when (parsed.scheme) {
-        null, "", "file" -> FileInputStream(File(parsed.path ?: uri))
-        else -> context.contentResolver.openInputStream(parsed)
-      } ?: return ""
-      stream.use { input ->
-        val digest = MessageDigest.getInstance("SHA-1")
-        val buffer = ByteArray(64 * 1024)
-        while (true) {
-          val read = input.read(buffer)
-          if (read < 0) break
-          digest.update(buffer, 0, read)
-        }
-        digest.digest().joinToString("") { "%02x".format(it) }
-      }
-    } catch (e: Exception) {
-      ""
-    }
   }
 }
