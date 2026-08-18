@@ -26,12 +26,36 @@
           "action": "VIEW",
           "category": ["DEFAULT"],
           "data": [
-            { "scheme": "file", "mimeType": "application/octet-stream", "pathPattern": ".*\\\\.gba" },
-            { "scheme": "file", "mimeType": "application/octet-stream", "pathPattern": ".*\\\\..*\\\\.gba" },
-            { "scheme": "file", "mimeType": "application/octet-stream", "pathPattern": ".*\\\\.gbc" },
-            { "scheme": "file", "mimeType": "application/octet-stream", "pathPattern": ".*\\\\..*\\\\.gbc" },
-            { "scheme": "file", "mimeType": "application/octet-stream", "pathPattern": ".*\\\\.gb" },
-            { "scheme": "file", "mimeType": "application/octet-stream", "pathPattern": ".*\\\\..*\\\\.gb" }
+            {
+              "scheme": "file",
+              "mimeType": "application/octet-stream",
+              "pathPattern": ".*\\\\.gba"
+            },
+            {
+              "scheme": "file",
+              "mimeType": "application/octet-stream",
+              "pathPattern": ".*\\\\..*\\\\.gba"
+            },
+            {
+              "scheme": "file",
+              "mimeType": "application/octet-stream",
+              "pathPattern": ".*\\\\.gbc"
+            },
+            {
+              "scheme": "file",
+              "mimeType": "application/octet-stream",
+              "pathPattern": ".*\\\\..*\\\\.gbc"
+            },
+            {
+              "scheme": "file",
+              "mimeType": "application/octet-stream",
+              "pathPattern": ".*\\\\.gb"
+            },
+            {
+              "scheme": "file",
+              "mimeType": "application/octet-stream",
+              "pathPattern": ".*\\\\..*\\\\.gb"
+            }
           ]
         },
         {
@@ -67,6 +91,14 @@
             "backgroundColor": "#1c1c22"
           },
           "imageWidth": 200
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true
+          }
         }
       ],
       [

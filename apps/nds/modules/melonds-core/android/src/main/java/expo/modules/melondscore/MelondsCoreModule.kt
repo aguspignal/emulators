@@ -1,6 +1,7 @@
 package expo.modules.melondscore
 
 import android.net.Uri
+import android.util.Log
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -19,6 +20,18 @@ class MelondsCoreModule : Module() {
     Name("MelondsCore")
 
     Events("stateChange", "error")
+
+    // Bring-up probe: touching MelondsCoreNative loads libmelonds-jni and calls
+    // into the linked melonDS core, logging its version (or the load failure) to
+    // logcat. Confirms the native build end to end; remove once real methods
+    // call into the core.
+    OnCreate {
+      try {
+        Log.i("MelondsCore", "melonDS core ${MelondsCoreNative.nativeGetCoreVersion()}")
+      } catch (e: Throwable) {
+        Log.e("MelondsCore", "libmelonds-jni failed to load", e)
+      }
+    }
 
     AsyncFunction("loadRom") { uri: String ->
       mapOf(

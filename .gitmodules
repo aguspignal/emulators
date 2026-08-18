@@ -1,3 +1,6 @@
 [submodule "apps/gba/modules/mgba-core/android/vendor/mgba"]
 	path = apps/gba/modules/mgba-core/android/vendor/mgba
 	url = https://github.com/mgba-emu/mgba.git
+[submodule "apps/nds/modules/melonds-core/android/vendor/melonds"]
+	path = apps/nds/modules/melonds-core/android/vendor/melonds
+	url = https://github.com/melonDS-emu/melonDS.git
