@@ -1,4 +1,4 @@
-import type { EmulatorButton } from "@emulators/core-interface";
+import type { ConsoleSpec, EmulatorButton } from "@emulators/core-interface";
 
 /** Absolute screen-coordinate rectangle. Matches touch `pageX`/`pageY`. */
 export interface Rect {
@@ -147,6 +147,77 @@ export function buildEmulatorLayout({
     },
     padArea,
     pad: buildGamepadLayout({ area: padArea, buttons, scale: scale?.portrait }),
+  };
+}
+
+/** Where a console's touch screen ends up on the device, and how big it is natively. */
+export interface TouchScreenRect {
+  /** Absolute screen coordinates, comparable with touch `pageX`/`pageY`. */
+  rect: Rect;
+  /** The touch screen's native pixel size, which `core.setTouch` expects. */
+  width: number;
+  height: number;
+}
+
+/**
+ * Locates a console's touch screen inside the rect the native view was given,
+ * or null for a console without one.
+ *
+ * This is the one place layout code needs the console's pixel dimensions, and
+ * it is unavoidable: the native view aspect-fits the whole composited
+ * framebuffer inside its rect and centres it, so only the same arithmetic can
+ * say where one of the stacked screens landed. Cores composite every screen
+ * into one framebuffer top to bottom — the same assumption `SlotSheet`'s
+ * thumbnail aspect makes — so a core that composites differently must change
+ * both.
+ */
+export function touchScreenRect(screen: Rect, spec: ConsoleSpec): TouchScreenRect | null {
+  const index = spec.touchScreen;
+  if (index === null || index < 0 || index >= spec.screens.length) return null;
+
+  const stackedWidth = Math.max(...spec.screens.map((s) => s.width));
+  const stackedHeight = spec.screens.reduce((total, s) => total + s.height, 0);
+  if (stackedWidth <= 0 || stackedHeight <= 0) return null;
+
+  const scale = Math.min(screen.width / stackedWidth, screen.height / stackedHeight);
+  if (!(scale > 0)) return null;
+
+  const left = screen.x + (screen.width - stackedWidth * scale) / 2;
+  const top = screen.y + (screen.height - stackedHeight * scale) / 2;
+
+  const target = spec.screens[index];
+  const above = spec.screens.slice(0, index).reduce((total, s) => total + s.height, 0);
+
+  return {
+    rect: {
+      // A screen narrower than the widest is centred in the stack, which is
+      // what compositing them into one framebuffer implies.
+      x: left + ((stackedWidth - target.width) / 2) * scale,
+      y: top + above * scale,
+      width: target.width * scale,
+      height: target.height * scale,
+    },
+    width: target.width,
+    height: target.height,
+  };
+}
+
+/**
+ * Maps an absolute screen point into the touch screen's native pixels, clamped
+ * to its bounds so a drag that leaves the screen still reads as an edge touch —
+ * which is how a stylus sliding off the plastic behaves.
+ */
+export function toTouchPoint(
+  touch: TouchScreenRect,
+  x: number,
+  y: number,
+): { x: number; y: number } {
+  const { rect } = touch;
+  const nx = ((x - rect.x) / rect.width) * touch.width;
+  const ny = ((y - rect.y) / rect.height) * touch.height;
+  return {
+    x: Math.min(Math.max(Math.floor(nx), 0), touch.width - 1),
+    y: Math.min(Math.max(Math.floor(ny), 0), touch.height - 1),
   };
 }
 

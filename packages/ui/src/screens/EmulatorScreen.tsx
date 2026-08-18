@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, BackHandler, StyleSheet, View } from "react-native";
 import { useSQLiteContext } from "expo-sqlite";
 import { useKeepAwake } from "expo-keep-awake";
@@ -27,7 +27,7 @@ import { GamepadOverlay } from "../components/gamepad/GamepadOverlay";
 import { GameMenu } from "../components/gamepad/GameMenu";
 import { SlotSheet } from "../components/gamepad/SlotSheet";
 import { useEmulatorLayout } from "../components/gamepad/useEmulatorLayout";
-import type { Rect } from "../components/gamepad/layout";
+import { touchScreenRect, type Rect } from "../components/gamepad/layout";
 import type { RootScreenProps } from "../navigation/types";
 
 /** Which menu layer is up. The gamepad is suspended for all but 'closed'. */
@@ -286,6 +286,10 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<"Emulator"
   // full-bleed game, portrait puts the game on top and the pad in a band below.
   // The size is the player's, per orientation; `buildEmulatorLayout` picks.
   const layout = useEmulatorLayout(spec.buttons, padScale);
+  // Where the DS/3DS touch screen landed inside the view's rect, or null for a
+  // console without one. Derived from the same layout the native view is given,
+  // so the two cannot disagree about where the bottom screen is.
+  const touchScreen = useMemo(() => touchScreenRect(layout.screen, spec), [layout.screen, spec]);
 
   return (
     <View style={styles.container}>
@@ -300,6 +304,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<"Emulator"
       {booted && (
         <GamepadOverlay
           layout={layout.pad}
+          touchScreen={touchScreen}
           onMenu={openMenu}
           suspended={menu !== "closed"}
           opacity={padOpacity[layout.orientation]}

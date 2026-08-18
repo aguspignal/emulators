@@ -10,8 +10,8 @@ import * as Haptics from "expo-haptics";
 import type { EmulatorButton } from "@emulators/core-interface";
 import { useAppConfig } from "../../config";
 import { useSettings } from "../../settings/SettingsContext";
-import type { GamepadLayout, Region } from "./layout";
-import { buttonsForTouch, hitRegion } from "./hitTest";
+import { toTouchPoint, type GamepadLayout, type Region, type TouchScreenRect } from "./layout";
+import { buttonsForTouch, containsPoint, hitRegion } from "./hitTest";
 import { NO_BUTTONS_PRESSED, PadVisuals } from "./PadVisuals";
 
 /** Whatever the platform stamps on a touch; only ever used as a map key. */
@@ -24,6 +24,13 @@ export interface GamepadOverlayProps {
    * emulator view are placed from one shared orientation decision.
    */
   layout: GamepadLayout;
+  /**
+   * Where the console's touch screen sits, for consoles that have one (from
+   * `touchScreenRect`). A touch that hits no pad region and lands in here
+   * drives `core.setTouch` instead. Omitted or null on single-screen consoles,
+   * which is what keeps the GBA app's behaviour byte-identical.
+   */
+  touchScreen?: TouchScreenRect | null;
   onMenu: () => void;
   /** Stops accepting touches and releases everything held (pause menu open). */
   suspended?: boolean;
@@ -46,6 +53,7 @@ export interface GamepadOverlayProps {
  */
 export function GamepadOverlay({
   layout,
+  touchScreen,
   onMenu,
   suspended = false,
   opacity,
@@ -64,6 +72,10 @@ export function GamepadOverlay({
   const pressed = useRef<Set<EmulatorButton>>(new Set());
   // Touch identifier -> the region that finger is steering (D-pad only).
   const owners = useRef<Map<TouchId, Region>>(new Map());
+  // The one finger driving the touch screen. A DS has a single stylus, so the
+  // first finger to land on the screen owns it until it lifts.
+  const stylus = useRef<TouchId | null>(null);
+  const stylusDown = useRef(false);
   const [visiblePressed, setVisiblePressed] =
     useState<ReadonlySet<EmulatorButton>>(NO_BUTTONS_PRESSED);
 
@@ -95,10 +107,27 @@ export function GamepadOverlay({
     [core, buzz],
   );
 
+  // Pressing is idempotent on the core's side, so a held or dragging stylus
+  // just restates its position; only the lift has to be edge-triggered.
+  const applyStylus = useCallback(
+    (point: { x: number; y: number } | null) => {
+      if (point) {
+        core.setTouch(point.x, point.y, true);
+        stylusDown.current = true;
+      } else if (stylusDown.current) {
+        core.setTouch(0, 0, false);
+        stylusDown.current = false;
+      }
+    },
+    [core],
+  );
+
   const releaseAll = useCallback(() => {
     owners.current.clear();
+    stylus.current = null;
+    applyStylus(null);
     applyPressed(new Set());
-  }, [applyPressed]);
+  }, [applyPressed, applyStylus]);
 
   const sync = useCallback(
     (event: GestureResponderEvent, ending: boolean) => {
@@ -108,6 +137,7 @@ export function GamepadOverlay({
       const lifting = ending ? new Set(changedTouches.map((t) => t.identifier)) : null;
       const next = new Set<EmulatorButton>();
       const stillDown = new Set<TouchId>();
+      let stylusPoint: { x: number; y: number } | null = null;
 
       for (const touch of touches) {
         if (lifting?.has(touch.identifier)) continue;
@@ -116,11 +146,30 @@ export function GamepadOverlay({
         // `locationX`/`locationY` are relative to each touch's own target
         // view, so they cannot be compared across fingers.
         const { pageX: x, pageY: y } = touch;
+
+        // The finger holding the stylus keeps it wherever it slides, and never
+        // presses a button on the way — the same ownership rule the D-pad uses.
+        // It matters in landscape, where the pad floats over a full-bleed game
+        // and the two areas overlap.
+        if (touchScreen && stylus.current === touch.identifier) {
+          stylusPoint = toTouchPoint(touchScreen, x, y);
+          continue;
+        }
+
         // A finger that started on the D-pad keeps steering it even after it
         // slides past the edge. Every other button re-tests on each move, so
         // dragging off A releases A, as players expect.
         const region = owners.current.get(touch.identifier) ?? hitRegion(layout, x, y);
-        if (!region) continue;
+        if (!region) {
+          // Missed the pad entirely: on a console with a touch screen, a finger
+          // inside it becomes the stylus. `hitRegion` having run first is what
+          // keeps the pad winning wherever the two overlap.
+          if (touchScreen && stylus.current === null && containsPoint(touchScreen.rect, x, y)) {
+            stylus.current = touch.identifier;
+            stylusPoint = toTouchPoint(touchScreen, x, y);
+          }
+          continue;
+        }
         if (region.kind === "dpad") owners.current.set(touch.identifier, region);
         for (const button of buttonsForTouch(region, x, y)) next.add(button);
       }
@@ -128,10 +177,14 @@ export function GamepadOverlay({
       for (const identifier of owners.current.keys()) {
         if (!stillDown.has(identifier)) owners.current.delete(identifier);
       }
+      if (stylus.current !== null && !stillDown.has(stylus.current)) {
+        stylus.current = null;
+      }
 
+      applyStylus(stylusPoint);
       applyPressed(next);
     },
-    [applyPressed, layout],
+    [applyPressed, applyStylus, layout, touchScreen],
   );
 
   const handleStart = useCallback(

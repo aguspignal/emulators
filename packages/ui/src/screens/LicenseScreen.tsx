@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet, Text } from "react-native";
-import { useAppConfig } from "../config";
+import { useAppConfig, usePrimaryColor } from "../config";
 import { colors, spacing, typography } from "../theme";
 import { openExternalLink } from "../utils/links";
 
@@ -14,6 +14,7 @@ const URL_PATTERN = /(https?:\/\/\S+)/;
  */
 export function LicenseScreen() {
   const { licenseNotice } = useAppConfig();
+  const primary = usePrimaryColor();
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -22,7 +23,7 @@ export function LicenseScreen() {
         .split(/\n{2,}/)
         .map((paragraph, i) => (
           <Text key={i} style={styles.paragraph}>
-            {linkify(paragraph.replace(/\s*\n\s*/g, " "))}
+            {linkify(paragraph.replace(/\s*\n\s*/g, " "), primary)}
           </Text>
         ))}
     </ScrollView>
@@ -30,13 +31,13 @@ export function LicenseScreen() {
 }
 
 /** Renders a paragraph as text with its URLs as nested, pressable `Text`. */
-function linkify(paragraph: string) {
+function linkify(paragraph: string, linkColor: string) {
   // split() with a capturing group keeps the delimiters and splits on every
   // match regardless of the /g flag, so odd indexes are the URLs and even
   // indexes the prose between them. Plain strings need no key.
   return paragraph.split(URL_PATTERN).map((chunk, i) =>
     i % 2 === 1 ? (
-      <Text key={i} style={styles.link} onPress={() => openLink(chunk)}>
+      <Text key={i} style={[styles.link, { color: linkColor }]} onPress={() => openLink(chunk)}>
         {chunk}
       </Text>
     ) : (
@@ -54,5 +55,5 @@ function openLink(url: string) {
 const styles = StyleSheet.create({
   container: { padding: spacing.md, gap: spacing.md },
   paragraph: { ...typography.body, color: colors.text, lineHeight: 21 },
-  link: { color: colors.primary, textDecorationLine: "underline" },
+  link: { textDecorationLine: "underline" },
 });

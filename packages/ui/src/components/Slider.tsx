@@ -6,6 +6,7 @@ import {
   type LayoutChangeEvent,
 } from "react-native";
 import { colors, radius } from "../theme";
+import { usePrimaryColor } from "../config";
 
 export interface SliderProps {
   value: number;
@@ -44,6 +45,7 @@ export function Slider({
   accessibilityLabel,
 }: SliderProps) {
   const [width, setWidth] = useState(0);
+  const primary = usePrimaryColor();
   // What the drag last produced. The lift has to commit this rather than
   // `value`: the prop cannot have come back through React yet.
   const latest = useRef(value);
@@ -127,7 +129,7 @@ export function Slider({
       {/* Every child is untouchable so `locationX` stays relative to the
           responder above, whatever the finger lands on. */}
       <View style={styles.track} pointerEvents="none">
-        <View style={[styles.fill, { width: percent }]} />
+        <View style={[styles.fill, { width: percent, backgroundColor: primary }]} />
       </View>
       <View style={[styles.thumb, { left: percent }]} pointerEvents="none" />
     </View>
@@ -142,7 +144,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
     overflow: "hidden",
   },
-  fill: { height: TRACK_HEIGHT, backgroundColor: colors.primary },
+  fill: { height: TRACK_HEIGHT },
   thumb: {
     position: "absolute",
     // Stated rather than left to how the parent aligns an absolute child.

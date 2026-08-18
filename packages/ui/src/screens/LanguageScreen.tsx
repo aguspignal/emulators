@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { LANGUAGES } from "../i18n";
 import { useSettings } from "../settings/SettingsContext";
 import { colors, radius, spacing, typography } from "../theme";
+import { usePrimaryColor } from "../config";
 
 /**
  * Picks the UI language: automatic (follow the device) or one of the shipped
@@ -47,6 +48,8 @@ function LanguageRow({
   onPress: () => void;
   last?: boolean;
 }) {
+  const primary = usePrimaryColor();
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -55,7 +58,7 @@ function LanguageRow({
       style={({ pressed }) => [styles.row, !last && styles.rowDivided, pressed && styles.rowPressed]}
     >
       <Text style={styles.rowLabel}>{label}</Text>
-      {active && <Ionicons name="checkmark" size={18} color={colors.primary} />}
+      {active && <Ionicons name="checkmark" size={18} color={primary} />}
     </Pressable>
   );
 }

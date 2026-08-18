@@ -2,7 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { acceptedExtensions } from "@emulators/storage";
-import { useAppConfig } from "../config";
+import { useAppConfig, usePrimaryColor } from "../config";
 import { LANGUAGES } from "../i18n";
 import { useSettings } from "../settings/SettingsContext";
 import { colors, radius, spacing, typography } from "../theme";
@@ -152,6 +152,8 @@ function SwitchRow({
   onToggle: () => void;
   last?: boolean;
 }) {
+  const primary = usePrimaryColor();
+
   return (
     <Pressable
       accessibilityRole="switch"
@@ -173,7 +175,7 @@ function SwitchRow({
       <View pointerEvents="none">
         <Switch
           value={value}
-          trackColor={{ false: colors.border, true: colors.primary }}
+          trackColor={{ false: colors.border, true: primary }}
           thumbColor={colors.text}
         />
       </View>

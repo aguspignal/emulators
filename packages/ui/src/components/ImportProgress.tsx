@@ -1,6 +1,7 @@
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors, radius, spacing, typography } from '../theme';
+import { usePrimaryColor } from '../config';
 
 export interface ImportProgressProps {
   visible: boolean;
@@ -16,6 +17,7 @@ export interface ImportProgressProps {
  */
 export function ImportProgress({ visible, done, total, currentName }: ImportProgressProps) {
   const { t } = useTranslation();
+  const primary = usePrimaryColor();
 
   return (
     <Modal
@@ -31,7 +33,7 @@ export function ImportProgress({ visible, done, total, currentName }: ImportProg
     >
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={primary} />
           <Text style={styles.title}>{t('home.importingTitle')}</Text>
           <Text style={styles.count}>{t('home.importingProgress', { done, total })}</Text>
           <Text style={styles.name} numberOfLines={1}>

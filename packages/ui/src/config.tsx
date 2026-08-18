@@ -2,6 +2,7 @@ import { createContext, useContext, type ComponentType, type ReactNode } from 'r
 import type { StyleProp, ViewStyle } from 'react-native';
 import type { ConsoleSpec, EmulatorCore } from '@emulators/core-interface';
 import type { CoverIndex } from '@emulators/storage';
+import { colors } from './theme';
 
 export interface EmulatorViewProps {
   style?: StyleProp<ViewStyle>;
@@ -52,6 +53,12 @@ export interface AppConfig {
    * `resolveCoverName` searches all of them, the ROM's own console first.
    */
   coverIndexes?: CoverIndex[];
+  /**
+   * Accent colour for this app, overriding `theme.colors.primary`. Optional —
+   * an app that omits it gets the shared default. Anything rendering inside
+   * <AppRoot /> must read it through `usePrimaryColor()`, not `colors.primary`.
+   */
+  primaryColor?: string;
 }
 
 const AppConfigContext = createContext<AppConfig | null>(null);
@@ -64,6 +71,15 @@ export function AppConfigProvider({
   children: ReactNode;
 }) {
   return <AppConfigContext.Provider value={config}>{children}</AppConfigContext.Provider>;
+}
+
+/**
+ * This app's accent colour: its `AppConfig.primaryColor`, or the shared
+ * default. Because it is a hook, styles that use it must be built during
+ * render rather than in a module-level StyleSheet.
+ */
+export function usePrimaryColor(): string {
+  return useAppConfig().primaryColor ?? colors.primary;
 }
 
 export function useAppConfig(): AppConfig {
