@@ -1,6 +1,6 @@
 # Emulators
 
-Three Android apps built with Expo + React Native, each emulating classic Nintendo consoles with a different native core:
+Three Android apps built with Expo + React Native, each emulating Nintendo consoles with a different native core:
 
 | App         | Consoles                                   | Core                                    |
 | ----------- | ------------------------------------------ | --------------------------------------- |
@@ -10,21 +10,6 @@ Three Android apps built with Expo + React Native, each emulating classic Ninten
 
 All UI and app logic lives in shared packages, and each app only contributes its native core module and configuration.
 
-## Architecture
-
 - **`packages/core-interface`** — pure TypeScript. The `EmulatorCore` contract every native module implements plus shared constants
 - **`packages/ui`** — everything the user sees: screens, React Navigation stack, theme. Each app injects an `AppConfig` and renders the shared `<AppRoot />`.
-- **`apps/*`** — one Expo project per app. Each contains its emulator core as a local Expo Module (Kotlin, JNI into the C/C++ core). Video never crosses the JS bridge: the core renders straight into a native view.
-
-## Getting started
-
-Requires Node 20+, JDK 17, and the Android SDK.
-
-```sh
-npm install            # from the root — installs every workspace
-
-npm run android:gba    # build & install an app on a device/emulator
-npm run gba            # start Metro for it (also: nds, threeds)
-
-npm run typecheck      # typecheck all workspaces
-```
+- **`apps/*`** — one Expo project per app. Each contains its emulator core as a local Expo Module (Kotlin, JNI into the C/C++ core). The core renders straight into a native view.
