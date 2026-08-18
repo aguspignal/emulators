@@ -18,9 +18,9 @@ Android-only Expo app emulating the Nintendo DS via the **melonDS** core (C++, i
   - `android/.../MelondsCoreView.kt` — hosts the SurfaceView, aspect-fits it and hands the Surface to the engine. **Video only** — it does no touch handling.
   - `src/index.ts` — typed wrapper exporting `core: EmulatorCore` and `EmulatorView`. Keep it in lockstep with the Kotlin definition and `@emulators/core-interface`.
 
-### Video, and the one stacked buffer
+### Video, and the one composited buffer
 
-Both 256×192 screens are composited into a **single 256×384 framebuffer**, top over bottom, so the surface handling, the blit and the screenshot path are the same single-window code gba uses — and the stacked aspect is what `SlotSheet`'s thumbnails already assume. melonDS renders `0xAARRGGBB` (its GPU2D comment calls it "32-bit BGRA", i.e. B,G,R,A in memory) while `WINDOW_FORMAT_RGBX_8888` wants red in the low byte, so **red and blue swap during the composite**; a blue-tinted picture means that swizzle broke.
+Both 256×192 screens are composited into a **single framebuffer** — 256×384 top over bottom by default, 512×192 side by side when the view's `screenLayout` prop is `"horizontal"` (which the shared `EmulatorScreen` sets in landscape) — so the surface handling, the blit and the screenshot path are the same single-window code gba uses. `setScreenLayout` resizes the buffer on the emulation thread under the surface lock; `captureFrame` always produces the stacked shape, whatever the view shows, because that aspect is what `SlotSheet`'s thumbnails assume. melonDS renders `0xAARRGGBB` (its GPU2D comment calls it "32-bit BGRA", i.e. B,G,R,A in memory) while `WINDOW_FORMAT_RGBX_8888` wants red in the low byte, so **red and blue swap during the composite**; a blue-tinted picture means that swizzle broke.
 
 ### Touch
 

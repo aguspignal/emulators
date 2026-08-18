@@ -285,11 +285,24 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<"Emulator"
   // Rotating the device rebuilds this: landscape floats the pad over a
   // full-bleed game, portrait puts the game on top and the pad in a band below.
   // The size is the player's, per orientation; `buildEmulatorLayout` picks.
-  const layout = useEmulatorLayout(spec.buttons, padScale);
+  const layout = useEmulatorLayout(spec, padScale);
   // Where the DS/3DS touch screen landed inside the view's rect, or null for a
   // console without one. Derived from the same layout the native view is given,
   // so the two cannot disagree about where the bottom screen is.
-  const touchScreen = useMemo(() => touchScreenRect(layout.screen, spec), [layout.screen, spec]);
+  const touchScreen = useMemo(
+    () => touchScreenRect(layout.screen, spec, layout.orientation),
+    [layout.screen, layout.orientation, spec],
+  );
+  // A multi-screen console re-arranges with the device: screens side by side
+  // in landscape, stacked in portrait. Same source (`layout.orientation`) as
+  // the touch rect above, so the native compositor and the touch mapping
+  // always agree. Single-screen apps never receive the prop.
+  const screenLayout =
+    spec.screens.length > 1
+      ? layout.orientation === "landscape"
+        ? ("horizontal" as const)
+        : ("vertical" as const)
+      : undefined;
 
   return (
     <View style={styles.container}>
@@ -300,7 +313,7 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<"Emulator"
         // strip under the gesture bar.
         <View style={[styles.padBand, { top: layout.padArea.y }]} />
       )}
-      <EmulatorView style={absoluteRect(layout.screen)} />
+      <EmulatorView style={absoluteRect(layout.screen)} screenLayout={screenLayout} />
       {booted && (
         <GamepadOverlay
           layout={layout.pad}

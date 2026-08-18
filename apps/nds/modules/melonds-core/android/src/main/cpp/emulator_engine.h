@@ -24,16 +24,15 @@ class NDS;
 // framebuffer, and the output surface. A singleton because the Expo Module and
 // the Expo View are separate Kotlin objects that must drive the same emulator.
 //
-// Both DS screens are composited into ONE stacked 256x384 buffer (top over
-// bottom), so the surface handling, the blit and the screenshot path are the
-// same single-window code the GBA app uses.
+// Both DS screens are composited into ONE buffer — stacked 256x384 (top over
+// bottom) by default, side by side 512x192 when the view asks for landscape —
+// so the surface handling, the blit and the screenshot path are the same
+// single-window code the GBA app uses.
 class EmulatorEngine {
 public:
-  // Native pixel dimensions of the composited frame.
+  // Native pixel dimensions of one DS screen.
   static constexpr unsigned kScreenWidth = 256;
   static constexpr unsigned kScreenHeight = 192;
-  static constexpr unsigned kFbWidth = kScreenWidth;
-  static constexpr unsigned kFbHeight = kScreenHeight * 2;
 
   static EmulatorEngine& instance();
 
@@ -69,6 +68,11 @@ public:
 
   std::string gameTitle();
   void videoSize(unsigned* width, unsigned* height);
+
+  // Arranges the two screens side by side (512x192) instead of stacked
+  // (256x384). Set from the view, which mirrors the shared UI's orientation
+  // decision; with no ROM loaded the flag just waits for the next loadRom.
+  void setScreenLayout(bool sideBySide);
 
   // Surface handoff from the Kotlin view. surfaceDestroyed() must not return
   // until the window can no longer be touched by the emulation thread.
@@ -113,9 +117,13 @@ private:
   std::atomic<uint32_t> mTouch{0};
   std::atomic<float> mSpeed{1.0f};
 
+  // The buffer itself (and mFbWidth/mFbHeight with it) only changes on the
+  // emulation thread, under mSurfaceMutex so a concurrent blit never reads a
+  // reallocation in progress. mSideBySide is guarded by mMutex.
   std::vector<uint32_t> mFramebuffer;
   unsigned mFbWidth = 0;
   unsigned mFbHeight = 0;
+  bool mSideBySide = false;
 
   std::string mGameTitle;
   // Base ROM filename; SetupDirectBoot wants it, and reset() direct-boots again.

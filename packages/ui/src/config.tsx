@@ -6,6 +6,13 @@ import { colors } from './theme';
 
 export interface EmulatorViewProps {
   style?: StyleProp<ViewStyle>;
+  /**
+   * How a multi-screen console's screens are composited: stacked top-to-bottom
+   * ("vertical") or side by side ("horizontal", used in landscape).
+   * `EmulatorScreen` only sends it when the console has more than one screen,
+   * so a single-screen app's view need not declare the prop.
+   */
+  screenLayout?: 'vertical' | 'horizontal';
 }
 
 /**

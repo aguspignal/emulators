@@ -34,7 +34,9 @@ declare class AzaharCoreNativeModule extends NativeModule<NativeEvents> {
 const native = requireNativeModule<AzaharCoreNativeModule>('AzaharCore');
 
 /** The view Azahar renders both 3DS screens into. */
-export const EmulatorView = requireNativeView<ViewProps>('AzaharCore');
+export const EmulatorView = requireNativeView<
+  ViewProps & { screenLayout?: 'vertical' | 'horizontal' }
+>('AzaharCore');
 
 /** Azahar core, exposed through the shared @emulators/core-interface contract. */
 export const core: EmulatorCore = {

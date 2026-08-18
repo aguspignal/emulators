@@ -155,8 +155,12 @@ bool EmulatorEngine::loadRom(const std::string& romPath, const std::string& savP
 
   mNds = std::move(nds);
 
-  mFbWidth = kFbWidth;
-  mFbHeight = kFbHeight;
+  {
+    // The layout prop can land before the ROM does; honour whatever it said.
+    std::lock_guard<std::mutex> lock(mMutex);
+    mFbWidth = mSideBySide ? kScreenWidth * 2 : kScreenWidth;
+    mFbHeight = mSideBySide ? kScreenHeight : kScreenHeight * 2;
+  }
   mFramebuffer.assign(static_cast<size_t>(mFbWidth) * mFbHeight, 0);
   mKeys.store(0, std::memory_order_relaxed);
   mTouch.store(0, std::memory_order_relaxed);
@@ -284,12 +288,26 @@ bool EmulatorEngine::loadState(const std::string& path) {
 bool EmulatorEngine::captureFrame(std::vector<uint32_t>& out, unsigned* width, unsigned* height) {
   // By reference: runOnEmuThread blocks until the closure has run.
   return runOnEmuThread([this, &out, width, height] {
-    if (mFramebuffer.empty()) {
+    if (!mNds || mFramebuffer.empty()) {
       return false;
     }
-    out = mFramebuffer;
-    *width = mFbWidth;
-    *height = mFbHeight;
+    // Always the stacked shape, whatever the view is showing: SlotSheet's
+    // thumbnails derive their aspect from the screens top-to-bottom, and a
+    // slot saved in landscape must look like every other slot.
+    const int front = mNds->GPU.FrontBuffer;
+    const uint32_t* top = mNds->GPU.Framebuffer[front][0].get();
+    const uint32_t* bottom = mNds->GPU.Framebuffer[front][1].get();
+    if (!top || !bottom) {
+      return false;
+    }
+    constexpr size_t kScreenPixels = static_cast<size_t>(kScreenWidth) * kScreenHeight;
+    out.resize(kScreenPixels * 2);
+    for (size_t i = 0; i < kScreenPixels; i++) {
+      out[i] = swapRedBlue(top[i]);
+      out[kScreenPixels + i] = swapRedBlue(bottom[i]);
+    }
+    *width = kScreenWidth;
+    *height = kScreenHeight * 2;
     return true;
   });
 }
@@ -360,6 +378,34 @@ void EmulatorEngine::videoSize(unsigned* width, unsigned* height) {
   *height = mFbHeight;
 }
 
+void EmulatorEngine::setScreenLayout(bool sideBySide) {
+  {
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (mSideBySide == sideBySide) {
+      return;
+    }
+    mSideBySide = sideBySide;
+    if (!mThreadAlive) {
+      return;  // no ROM running: the next loadRom sizes the framebuffer from the flag
+    }
+  }
+  // Resized on the emulation thread, where every other framebuffer write
+  // lives. The surface lock spans the reallocation and recomposite because
+  // surfaceChanged() blits from another thread.
+  runOnEmuThread([this, sideBySide] {
+    std::lock_guard<std::mutex> lock(mSurfaceMutex);
+    mFbWidth = sideBySide ? kScreenWidth * 2 : kScreenWidth;
+    mFbHeight = sideBySide ? kScreenHeight : kScreenHeight * 2;
+    mFramebuffer.assign(static_cast<size_t>(mFbWidth) * mFbHeight, 0);
+    compositeFrame();
+    if (mWindow) {
+      ANativeWindow_setBuffersGeometry(mWindow, mFbWidth, mFbHeight, WINDOW_FORMAT_RGBX_8888);
+      blitLocked();  // repaint now, so a paused game re-arranges too
+    }
+    return true;
+  });
+}
+
 void EmulatorEngine::surfaceChanged(ANativeWindow* window) {
   std::lock_guard<std::mutex> lock(mSurfaceMutex);
   if (mWindow) {
@@ -406,6 +452,21 @@ void EmulatorEngine::compositeFrame() {
   const uint32_t* top = mNds->GPU.Framebuffer[front][0].get();
   const uint32_t* bottom = mNds->GPU.Framebuffer[front][1].get();
   if (!top || !bottom) {
+    return;
+  }
+  // Branches on the buffer actually allocated, not mSideBySide: the flag can
+  // flip ahead of the emu-thread resize, and the write must match the buffer.
+  if (mFbWidth == kScreenWidth * 2) {
+    // Side by side: each 512-wide row is a top-screen row then a bottom one.
+    for (unsigned y = 0; y < kScreenHeight; y++) {
+      uint32_t* dst = mFramebuffer.data() + static_cast<size_t>(y) * mFbWidth;
+      const uint32_t* topRow = top + static_cast<size_t>(y) * kScreenWidth;
+      const uint32_t* bottomRow = bottom + static_cast<size_t>(y) * kScreenWidth;
+      for (unsigned x = 0; x < kScreenWidth; x++) {
+        dst[x] = swapRedBlue(topRow[x]);
+        dst[kScreenWidth + x] = swapRedBlue(bottomRow[x]);
+      }
+    }
     return;
   }
   // Stack the two 256x192 screens into one 256x384 buffer, top over bottom.

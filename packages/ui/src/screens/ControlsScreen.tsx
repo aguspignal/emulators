@@ -41,7 +41,7 @@ export function ControlsScreen({ navigation }: RootScreenProps<"Controls">) {
   // No ROM is booted, so there is no `RomInfo.console` to lay the pad out for;
   // the app's headline console is the honest preview.
   const spec = consoles[0];
-  const layout = useEmulatorLayout(spec.buttons, scale);
+  const layout = useEmulatorLayout(spec, scale);
   const orientation = layout.orientation;
 
   // The size slider ends where this device's pad stops growing, not where the

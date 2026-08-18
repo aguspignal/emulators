@@ -53,7 +53,11 @@ class AzaharCoreModule : Module() {
     Function("setVolume") { volume: Double -> }
     Function("setSpeed") { multiplier: Double -> }
 
-    View(AzaharCoreView::class) {}
+    View(AzaharCoreView::class) {
+      // Stub, like the rest: the shared UI sends "vertical"/"horizontal" per
+      // orientation; the real Azahar view will arrange its screens from it.
+      Prop("screenLayout") { _: AzaharCoreView, _: String? -> }
+    }
   }
 
   /** Empty string when the ROM can't be read — the contract allows that. */

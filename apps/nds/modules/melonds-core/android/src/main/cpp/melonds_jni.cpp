@@ -60,6 +60,10 @@ jintArray nativeGetVideoSize(JNIEnv* env, jclass) {
   return result;
 }
 
+void nativeSetScreenLayout(JNIEnv*, jclass, jboolean sideBySide) {
+  EmulatorEngine::instance().setScreenLayout(sideBySide);
+}
+
 void nativeSetKeys(JNIEnv*, jclass, jint keys) {
   EmulatorEngine::instance().setKeys(static_cast<uint32_t>(keys));
 }
@@ -138,6 +142,7 @@ const JNINativeMethod kMethods[] = {
     {"nativeReset", "()V", reinterpret_cast<void*>(nativeReset)},
     {"nativeGetGameTitle", "()Ljava/lang/String;", reinterpret_cast<void*>(nativeGetGameTitle)},
     {"nativeGetVideoSize", "()[I", reinterpret_cast<void*>(nativeGetVideoSize)},
+    {"nativeSetScreenLayout", "(Z)V", reinterpret_cast<void*>(nativeSetScreenLayout)},
     {"nativeSetKeys", "(I)V", reinterpret_cast<void*>(nativeSetKeys)},
     {"nativeSetTouch", "(IIZ)V", reinterpret_cast<void*>(nativeSetTouch)},
     {"nativeSaveState", "(Ljava/lang/String;)Z", reinterpret_cast<void*>(nativeSaveState)},

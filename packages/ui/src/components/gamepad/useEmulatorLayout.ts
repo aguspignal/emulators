@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { EmulatorButton } from "@emulators/core-interface";
+import type { ConsoleSpec } from "@emulators/core-interface";
 import { buildEmulatorLayout, type EmulatorLayout, type Orientation } from "./layout";
 
 /**
@@ -20,7 +20,7 @@ import { buildEmulatorLayout, type EmulatorLayout, type Orientation } from "./la
  * that decides which orientation this is, so no caller has to pick first.
  */
 export function useEmulatorLayout(
-  buttons: readonly EmulatorButton[],
+  spec: ConsoleSpec,
   scale: Record<Orientation, number>,
 ): EmulatorLayout {
   const { width, height } = useWindowDimensions();
@@ -28,11 +28,11 @@ export function useEmulatorLayout(
 
   return useMemo(
     () =>
-      buildEmulatorLayout({ width, height, insets: { top, right, bottom, left }, buttons, scale }),
+      buildEmulatorLayout({ width, height, insets: { top, right, bottom, left }, spec, scale }),
     // The two scales are depended on as primitives, not as the object holding
     // them: a settings object rebuilt on an unrelated render must not produce a
     // new layout, which `GamepadOverlay` reads as "every button just moved" and
     // answers by releasing whatever is held.
-    [width, height, top, right, bottom, left, buttons, scale.portrait, scale.landscape],
+    [width, height, top, right, bottom, left, spec, scale.portrait, scale.landscape],
   );
 }
