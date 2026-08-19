@@ -22,7 +22,7 @@ export default {
     addRom: 'Ajouter une ROM',
     emptyTitle: "Aucune ROM pour l'instant",
     emptyMessage:
-      'Ajoutez une ROM depuis votre appareil pour commencer à jouer. Fichiers pris en charge : {{extensions}}',
+      "Ajoutez une ROM depuis votre appareil pour commencer à jouer. Fichiers pris en charge : {{extensions}}. Pour en savoir plus sur l'importation, ouvrez l'Aide via l'icône d'information en haut.",
     duplicateTitle: 'Déjà dans la bibliothèque',
     duplicateMessage: '{{name}} est déjà dans votre bibliothèque.',
     importFailed: "Échec de l'importation",
@@ -100,8 +100,8 @@ export default {
       "Appuyez sur « {{add}} » sur l'écran de la bibliothèque, puis sur « {{file}} » pour un seul jeu.",
     step2OptionFolder:
       "Appuyez sur « {{add}} », puis sur « {{folder}} » pour importer toutes les ROMs d'un dossier et de ses sous-dossiers.",
-    step2OptionOpenWith:
-      'Appuyez sur un fichier ROM dans un gestionnaire de fichiers ou dans vos téléchargements et choisissez cette application dans la liste « Ouvrir avec » : elle est importée et démarre aussitôt.',
+    step2OptionShare:
+      'Partagez un fichier ROM avec cette application depuis un gestionnaire de fichiers ou toute autre application : elle est importée et démarre aussitôt.',
     step3Title: 'Jouer',
     step3Body:
       'Appuyez sur un jeu de la bibliothèque pour le lancer. Maintenez-le pour le mettre en favori ou le supprimer.',

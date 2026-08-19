@@ -21,7 +21,8 @@ export default {
     myConsoleGames: '내 {{console}} 게임',
     addRom: 'ROM 추가',
     emptyTitle: '아직 ROM이 없습니다',
-    emptyMessage: '기기에서 ROM을 추가해 게임을 시작하세요. 지원 파일: {{extensions}}',
+    emptyMessage:
+      '기기에서 ROM을 추가해 게임을 시작하세요. 지원 파일: {{extensions}}. 가져오기에 대한 자세한 내용은 위 정보 아이콘의 도움말에서 확인할 수 있습니다.',
     duplicateTitle: '이미 라이브러리에 있습니다',
     duplicateMessage: '{{name}}은(는) 이미 라이브러리에 있습니다.',
     importFailed: '가져오기 실패',
@@ -90,8 +91,8 @@ export default {
       '라이브러리 화면에서 "{{add}}"를 누른 뒤, 게임 하나만 가져오려면 "{{file}}"을 선택하세요.',
     step2OptionFolder:
       '"{{add}}"를 누른 뒤 "{{folder}}"를 선택하면 폴더와 하위 폴더의 ROM을 모두 가져옵니다.',
-    step2OptionOpenWith:
-      '파일 관리자나 다운로드 목록에서 ROM 파일을 누르고 "연결 프로그램" 목록에서 이 앱을 선택하세요. 바로 가져와 실행됩니다.',
+    step2OptionShare:
+      '파일 관리자나 다른 앱에서 ROM 파일을 이 앱으로 공유하세요. 바로 가져와 실행됩니다.',
     step3Title: '플레이',
     step3Body:
       '라이브러리에서 게임을 누르면 실행됩니다. 길게 누르면 즐겨찾기에 추가하거나 삭제할 수 있습니다.',

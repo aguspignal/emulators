@@ -21,7 +21,8 @@ export default {
     myConsoleGames: 'マイ{{console}}ゲーム',
     addRom: 'ROMを追加',
     emptyTitle: 'ROMがまだありません',
-    emptyMessage: '端末からROMを追加してプレイを始めましょう。対応ファイル: {{extensions}}',
+    emptyMessage:
+      '端末からROMを追加してプレイを始めましょう。対応ファイル: {{extensions}}。詳しいインポート方法は、上の情報アイコンの「ヘルプ」で確認できます。',
     duplicateTitle: 'すでにライブラリにあります',
     duplicateMessage: '{{name}}はすでにライブラリにあります。',
     importFailed: 'インポートに失敗しました',
@@ -89,8 +90,8 @@ export default {
     step2OptionFile: 'ライブラリ画面で「{{add}}」をタップし、1本だけなら「{{file}}」を選びます。',
     step2OptionFolder:
       '「{{add}}」をタップし、「{{folder}}」を選ぶと、フォルダとそのサブフォルダ内のROMをすべて取り込みます。',
-    step2OptionOpenWith:
-      'ファイルマネージャーやダウンロード一覧でROMファイルをタップし、「アプリで開く」からこのアプリを選びます。インポートされてすぐに起動します。',
+    step2OptionShare:
+      'ファイルマネージャーや他のアプリからROMファイルをこのアプリに共有します。インポートされてすぐに起動します。',
     step3Title: '遊ぶ',
     step3Body:
       'ライブラリのゲームをタップすると起動します。長押しするとお気に入り登録や削除ができます。',
