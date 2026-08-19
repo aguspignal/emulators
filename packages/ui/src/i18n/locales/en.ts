@@ -26,7 +26,8 @@ export default {
     myConsoleGames: 'My {{console}} games',
     addRom: 'Add ROM',
     emptyTitle: 'No ROMs yet',
-    emptyMessage: 'Add a ROM from your device to start playing. Supported files: {{extensions}}',
+    emptyMessage:
+      'Add a ROM from your device to start playing. Supported files: {{extensions}}. For more info on importing, open the Help from the info icon above.',
     duplicateTitle: 'Already in library',
     duplicateMessage: '{{name}} is already in your library.',
     importFailed: 'Import failed',
@@ -101,8 +102,8 @@ export default {
     step2OptionFile: 'Tap "{{add}}" on the library screen, then "{{file}}" for a single game.',
     step2OptionFolder:
       'Tap "{{add}}", then "{{folder}}" to import every ROM in a folder and its subfolders.',
-    step2OptionOpenWith:
-      'Tap a ROM file in a file manager or in your downloads and pick this app from the "Open with" list — it is imported and starts right away.',
+    step2OptionShare:
+      'Share a ROM file with this app from a file manager or any other app. It is imported and starts right away.',
     step3Title: 'Play',
     step3Body: 'Tap a game in the library to start it. Hold it to favorite or delete it.',
     tipsTitle: 'Good to know',

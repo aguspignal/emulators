@@ -17,7 +17,7 @@ const config: AppConfig = {
   sharedFiles,
   licenseNotice: LICENSE_NOTICE,
   // Mirrors `version` in app.json — edit both together.
-  version: "1.1.0",
+  version: "1.2.0",
   termsUrl: "https://sites.google.com/view/gbaemulator-terms",
   privacyUrl: "https://sites.google.com/view/emulator-privacy",
   coverIndexes: [

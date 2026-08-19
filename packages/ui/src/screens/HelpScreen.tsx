@@ -23,12 +23,12 @@ export function HelpScreen() {
     {
       title: t("help.step2Title"),
       body: t("help.step2Body"),
-      // The two picker options and the "open with" one read as one choice, so
+      // The two picker options and the share-to-app one read as one choice, so
       // they are bullets under a single step rather than steps of their own.
       options: [
         t("help.step2OptionFile", { add: t("home.addRom"), file: t("home.importPickFile") }),
         t("help.step2OptionFolder", { add: t("home.addRom"), folder: t("home.importPickFolder") }),
-        t("help.step2OptionOpenWith"),
+        t("help.step2OptionShare"),
       ],
     },
     { title: t("help.step3Title"), body: t("help.step3Body") },

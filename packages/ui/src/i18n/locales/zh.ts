@@ -21,7 +21,8 @@ export default {
     myConsoleGames: '我的{{console}}游戏',
     addRom: '添加 ROM',
     emptyTitle: '还没有 ROM',
-    emptyMessage: '从设备添加 ROM 开始游戏。支持的文件：{{extensions}}',
+    emptyMessage:
+      '从设备添加 ROM 开始游戏。支持的文件：{{extensions}}。更多导入说明，请点按上方的信息图标查看“帮助”。',
     duplicateTitle: '已在游戏库中',
     duplicateMessage: '{{name}} 已在你的游戏库中。',
     importFailed: '导入失败',
@@ -88,8 +89,8 @@ export default {
     step2Body: '有三种方式：',
     step2OptionFile: '在游戏库界面点按“{{add}}”，再选择“{{file}}”导入单个游戏。',
     step2OptionFolder: '点按“{{add}}”，再选择“{{folder}}”导入某个文件夹及其子文件夹中的全部 ROM。',
-    step2OptionOpenWith:
-      '在文件管理器或下载列表中点按 ROM 文件，在“打开方式”列表中选择本应用，文件会被导入并立即启动。',
+    step2OptionShare:
+      '在文件管理器或其他应用中将 ROM 文件分享给本应用，文件会被导入并立即启动。',
     step3Title: '开始游戏',
     step3Body: '点按游戏库中的游戏即可启动。长按可将其收藏或删除。',
     tipsTitle: '小提示',
