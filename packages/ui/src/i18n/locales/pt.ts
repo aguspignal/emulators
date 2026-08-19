@@ -18,7 +18,7 @@ export default {
   home: {
     title: 'Emulador de {{consoles}}',
     favorites: 'Favoritos',
-    myGames: 'Meus jogos',
+    myConsoleGames: 'Meus jogos de {{console}}',
     addRom: 'Adicionar ROM',
     emptyTitle: 'Nenhuma ROM ainda',
     emptyMessage:

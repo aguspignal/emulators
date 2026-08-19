@@ -23,7 +23,7 @@ export default {
   home: {
     title: '{{consoles}} Emulator',
     favorites: 'Favorites',
-    myGames: 'My games',
+    myConsoleGames: 'My {{console}} games',
     addRom: 'Add ROM',
     emptyTitle: 'No ROMs yet',
     emptyMessage: 'Add a ROM from your device to start playing. Supported files: {{extensions}}',

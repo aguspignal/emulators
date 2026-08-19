@@ -44,9 +44,9 @@ bool EmulatorEngine::loadRom(const std::string& romPath, const std::string& savP
   mCoreInitConfig(core, "android");
   core->setAudioBufferSize(core, 1024);
 
-  core->desiredVideoDimensions(core, &mFbWidth, &mFbHeight);
-  mFramebuffer.assign(static_cast<size_t>(mFbWidth) * mFbHeight, 0);
-  core->setVideoBuffer(core, mFramebuffer.data(), mFbWidth);
+  // Sized again after the reset, once the core knows what it is running; the
+  // renderer the reset attaches needs a buffer to already be there.
+  syncVideoBuffer(core);
 
   if (!mCoreLoadFile(core, romPath.c_str())) {
     ALOGE("mCoreLoadFile failed for %s", romPath.c_str());
@@ -65,6 +65,7 @@ bool EmulatorEngine::loadRom(const std::string& romPath, const std::string& savP
   }
 
   core->reset(core);
+  syncVideoBuffer(core);
 
   if (!mAudio.open()) {
     ALOGE("Audio unavailable; continuing without sound");
@@ -119,6 +120,32 @@ void EmulatorEngine::unloadRom() {
   mFramebuffer.clear();
   mFbWidth = 0;
   mFbHeight = 0;
+}
+
+/**
+ * Points the core at a framebuffer of the size it currently asks for.
+ *
+ * Called twice per load, because the answer moves. The GB core reports the
+ * Super Game Boy's 256x224 for as long as the model is undetected — which it
+ * is until the ROM has been loaded and reset — and only then settles on 160x144
+ * for an ordinary Game Boy or Game Boy Color game. Asking once, up front, left
+ * every GB/GBC game rendered into the top-left corner of an SGB-sized frame:
+ * smaller than the view can show, and pushed off-centre by border space the
+ * game never fills. A real SGB game still gets its 256x224, and GBA is 240x160
+ * either way.
+ */
+void EmulatorEngine::syncVideoBuffer(mCore* core) {
+  unsigned width = 0;
+  unsigned height = 0;
+  core->desiredVideoDimensions(core, &width, &height);
+  if (width == mFbWidth && height == mFbHeight && !mFramebuffer.empty()) {
+    return;
+  }
+  mFbWidth = width;
+  mFbHeight = height;
+  mFramebuffer.assign(static_cast<size_t>(mFbWidth) * mFbHeight, 0);
+  // assign() can move the storage, so the core is re-pointed at it every time.
+  core->setVideoBuffer(core, mFramebuffer.data(), mFbWidth);
 }
 
 void EmulatorEngine::setPaused(bool paused) {

@@ -4,7 +4,7 @@ The TypeScript contract every native emulator module (mGBA, melonDS, Azahar) imp
 
 **Pure TypeScript. Never add a dependency on React, React Native, Expo, or anything else.** This package must stay importable from any context (native module wrappers, UI, future tooling).
 
-- `src/types.ts` — `EmulatorCore` (the contract: ROM lifecycle, playback control, button/touch input, savestates, save-file cleanup, screenshots, volume/speed, events), `EmulatorButton`, `EmulatorState`, `RomInfo`, event map.
+- `src/types.ts` — `EmulatorCore` (the contract: ROM lifecycle, playback control, button/touch input, savestates, save-file cleanup, screenshots, volume/speed, events), `EmulatorButton`, `EmulatorState`, `RomInfo`, event map, and `SharedFileSource` — the optional per-app native channel for `ACTION_SEND` files, whose URI rides in intent extras where React Native's `Linking` can't deliver it (unlike `EmulatorCore`, a module implements it only if its app declares the SEND filter).
 - `src/constants.ts` — `CONSOLES`: per-console screen dimensions, touch-screen index, display names and title abbreviations (both deliberately untranslated), ROM file extensions, and the console's physical `buttons` (which drives the on-screen gamepad, so the UI never branches on which app it is); `SAVESTATE_SLOTS` and `AUTO_SAVESTATE_SLOT` (slot 0, written on exit/background and reloaded on boot — never offered as a manual save target).
 
 Notes:
