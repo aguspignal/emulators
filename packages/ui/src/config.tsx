@@ -1,6 +1,6 @@
 import { createContext, useContext, type ComponentType, type ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import type { ConsoleSpec, EmulatorCore } from '@emulators/core-interface';
+import type { ConsoleSpec, EmulatorCore, SharedFileSource } from '@emulators/core-interface';
 import type { CoverIndex } from '@emulators/storage';
 import { colors } from './theme';
 
@@ -66,6 +66,13 @@ export interface AppConfig {
    * <AppRoot /> must read it through `usePrimaryColor()`, not `colors.primary`.
    */
   primaryColor?: string;
+  /**
+   * Native source of files shared *to* the app through ACTION_SEND, consumed
+   * by `useOpenedRom` alongside the Linking-delivered "open with" URIs.
+   * Optional: an app whose module doesn't expose one simply never receives
+   * share-sheet files.
+   */
+  sharedFiles?: SharedFileSource;
 }
 
 const AppConfigContext = createContext<AppConfig | null>(null);

@@ -1,6 +1,6 @@
 import { AppRoot, type AppConfig } from "@emulators/ui";
 import { CONSOLES } from "@emulators/core-interface";
-import { core, EmulatorView } from "./modules/mgba-core";
+import { core, EmulatorView, sharedFiles } from "./modules/mgba-core";
 // Each of these is one long string constant, so importing it costs a
 // reference — Hermes materializes the table from bytecode on first use.
 // Don't "optimize" these into require() thunks; that trades type safety for
@@ -14,6 +14,7 @@ const config: AppConfig = {
   consoles: [CONSOLES.gba, CONSOLES.gbc, CONSOLES.gb],
   core,
   EmulatorView,
+  sharedFiles,
   licenseNotice: LICENSE_NOTICE,
   // Mirrors `version` in app.json — edit both together.
   version: "1.1.0",

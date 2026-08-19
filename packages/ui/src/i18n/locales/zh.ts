@@ -18,7 +18,7 @@ export default {
   home: {
     title: '{{consoles}} 模拟器',
     favorites: '收藏',
-    myGames: '我的游戏',
+    myConsoleGames: '我的{{console}}游戏',
     addRom: '添加 ROM',
     emptyTitle: '还没有 ROM',
     emptyMessage: '从设备添加 ROM 开始游戏。支持的文件：{{extensions}}',

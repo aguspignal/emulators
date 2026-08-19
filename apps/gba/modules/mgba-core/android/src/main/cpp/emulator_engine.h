@@ -64,6 +64,8 @@ private:
   bool runOnEmuThread(std::function<bool()> fn);
   // Emulation thread only, or once it has been joined.
   void forceSaveClean();
+  // Load path only: (re)allocates the framebuffer for the core's current size.
+  void syncVideoBuffer(mCore* core);
   void pumpAudio();
   void blitLocked();  // caller holds mSurfaceMutex
 

@@ -1,5 +1,7 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCallback, useMemo, useState } from "react";
 import {
+  Pressable,
   RefreshControl,
   SectionList,
   StyleSheet,
@@ -9,6 +11,7 @@ import {
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useSQLiteContext } from "expo-sqlite";
+import { CONSOLES, type ConsoleId } from "@emulators/core-interface";
 import {
   acceptedExtensions,
   deleteCoversForRom,
@@ -49,6 +52,14 @@ import type { RootScreenProps } from "../navigation/types";
  */
 const selfHealed = new Set<number>();
 
+interface HomeSection {
+  title: string;
+  /** Only the per-console sections carry one; their header row toggles collapse. */
+  consoleId?: ConsoleId;
+  collapsed?: boolean;
+  data: RomRow[][];
+}
+
 /** The ROM library: list, import, favorite/delete, and boot-on-tap. */
 export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
   const { t } = useTranslation();
@@ -59,29 +70,51 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
   const [progress, setProgress] = useState<FolderImportProgress | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [dialog, setDialog] = useState<DialogRequest | null>(null);
+  const [collapsed, setCollapsed] = useState<Partial<Record<ConsoleId, boolean>>>({});
   const { width } = useWindowDimensions();
   const grid = posterGridLayout(width);
   const sweepCovers = useCoverSweep(reload);
 
-  // Favourites get their own section once there is one to show; "My games"
-  // is always titled, favourites or not.
-  const sections = useMemo<{ title: string; data: RomRow[][] }[]>(() => {
+  const toggleSection = useCallback((consoleId: ConsoleId) => {
+    setCollapsed((prev) => ({ ...prev, [consoleId]: !prev[consoleId] }));
+  }, []);
+
+  // Favourites get their own section once there is one to show; the rest is
+  // one collapsible section per console, in AppConfig order.
+  const sections = useMemo<HomeSection[]>(() => {
     // No sections at all rather than one empty section: SectionList counts a
     // section's header and footer as items, so an empty section would keep
     // `ListEmptyComponent` from ever rendering.
     if (roms.length === 0) return [];
     const favorites = roms.filter((rom) => rom.favorite === 1);
     const rest = roms.filter((rom) => rom.favorite !== 1);
+    const byConsole = new Map<ConsoleId, RomRow[]>();
+    for (const rom of rest) {
+      const games = byConsole.get(rom.console_id);
+      if (games) games.push(rom);
+      else byConsole.set(rom.console_id, [rom]);
+    }
+    // Config consoles first, in config order; a row whose console the config
+    // doesn't list (shouldn't happen — imports filter on it) still gets a
+    // trailing section rather than silently vanishing from the library.
+    const orderedIds = [
+      ...consoles.map((spec) => spec.id).filter((id) => byConsole.has(id)),
+      ...[...byConsole.keys()].filter((id) => !consoles.some((spec) => spec.id === id)),
+    ];
     return [
       ...(favorites.length > 0
         ? [{ title: t("home.favorites"), data: chunkRows(favorites, grid.columns) }]
         : []),
-      ...(rest.length > 0
-        ? [{ title: t("home.myGames"), data: chunkRows(rest, grid.columns) }]
-        : []),
+      // A collapsed section keeps its header in the list but hands it no rows.
+      ...orderedIds.map((id) => ({
+        title: t("home.myConsoleGames", { console: CONSOLES[id].abbreviation }),
+        consoleId: id,
+        collapsed: collapsed[id] === true,
+        data: collapsed[id] ? [] : chunkRows(byConsole.get(id) ?? [], grid.columns),
+      })),
     ];
     // t's identity changes with the language — exactly the invalidation wanted.
-  }, [roms, grid.columns, t]);
+  }, [roms, consoles, grid.columns, collapsed, t]);
 
   const importOneRom = useCallback(async () => {
     if (importing) return;
@@ -307,9 +340,32 @@ export function HomeScreen({ navigation }: RootScreenProps<"Home">) {
         // One item is a whole row of tiles, so the id of its first ROM
         // identifies it and shifts with the row when the library changes.
         keyExtractor={(row) => `row-${row[0]?.id ?? "empty"}`}
-        renderSectionHeader={({ section }) => (
-          <Text style={styles.sectionHeader}>{section.title}</Text>
-        )}
+        renderSectionHeader={({ section }) => {
+          const { consoleId } = section;
+          if (consoleId == null) {
+            return <Text style={styles.sectionHeader}>{section.title}</Text>;
+          }
+          return (
+            <Pressable
+              style={styles.collapseHeader}
+              onPress={() => toggleSection(consoleId)}
+              hitSlop={spacing.sm}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: section.collapsed !== true }}
+            >
+              <Text style={styles.collapseTitle}>{section.title}</Text>
+              <Ionicons
+                name={section.collapsed ? "chevron-up" : "chevron-down"}
+                size={18}
+                color={colors.textMuted}
+              />
+            </Pressable>
+          );
+        }}
+        // Space between sections beyond the in-section row gap, so sections
+        // read as groups. Renders under a collapsed header too, keeping the
+        // rhythm the same whether a section is open or closed.
+        renderSectionFooter={() => <View style={styles.sectionFooter} />}
         // Tiles take their cover's own shape, so a row's items differ in
         // height; top-aligning keeps the posters on one line rather than
         // centring each against the tallest.
@@ -389,5 +445,18 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.md,
   },
+  collapseHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  collapseTitle: {
+    ...typography.title,
+    color: colors.text,
+    flexShrink: 1,
+  },
+  sectionFooter: { height: spacing.md },
   listHeader: { marginBottom: spacing.md },
 });

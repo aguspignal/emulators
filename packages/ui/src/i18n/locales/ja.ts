@@ -18,7 +18,7 @@ export default {
   home: {
     title: '{{consoles}}エミュレーター',
     favorites: 'お気に入り',
-    myGames: 'マイゲーム',
+    myConsoleGames: 'マイ{{console}}ゲーム',
     addRom: 'ROMを追加',
     emptyTitle: 'ROMがまだありません',
     emptyMessage: '端末からROMを追加してプレイを始めましょう。対応ファイル: {{extensions}}',

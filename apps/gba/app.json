@@ -13,6 +13,11 @@
       "predictiveBackGestureEnabled": false,
       "intentFilters": [
         {
+          "action": "SEND",
+          "category": ["DEFAULT"],
+          "data": [{ "mimeType": "*/*" }]
+        },
+        {
           "action": "VIEW",
           "category": ["DEFAULT"],
           "data": [{ "scheme": "content", "mimeType": "application/*" }]

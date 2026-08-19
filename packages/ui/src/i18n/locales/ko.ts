@@ -18,7 +18,7 @@ export default {
   home: {
     title: '{{consoles}} 에뮬레이터',
     favorites: '즐겨찾기',
-    myGames: '내 게임',
+    myConsoleGames: '내 {{console}} 게임',
     addRom: 'ROM 추가',
     emptyTitle: '아직 ROM이 없습니다',
     emptyMessage: '기기에서 ROM을 추가해 게임을 시작하세요. 지원 파일: {{extensions}}',

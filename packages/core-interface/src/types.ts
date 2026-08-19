@@ -49,6 +49,23 @@ export interface EmulatorSubscription {
 }
 
 /**
+ * A native channel for files the system handed the app when the URI cannot
+ * travel through React Native's `Linking` — today that is `ACTION_SEND` (the
+ * share sheet), whose file arrives in the intent's `EXTRA_STREAM` extra
+ * rather than its data URI. Optional per app: a native module that declares
+ * the SEND intent filter exposes one of these, and the app passes it through
+ * `AppConfig`; the shared UI treats its URIs exactly like "open with" URIs.
+ * `VIEW` intents don't need this — their URI is the intent data, which
+ * `Linking` already delivers.
+ */
+export interface SharedFileSource {
+  /** The file the launch intent carried, if any — the cold-start path. */
+  getInitialFile(): string | null;
+  /** Files arriving while the app is already running (`onNewIntent`). */
+  addListener(listener: (uri: string) => void): EmulatorSubscription;
+}
+
+/**
  * The contract every native core module (mGBA, melonDS, Azahar) implements.
  *
  * Video output does NOT go through this interface: each native module also
