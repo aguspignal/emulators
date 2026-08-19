@@ -179,6 +179,34 @@ export async function pickAndImportRom(
 }
 
 /**
+ * A unique directory under `Paths.cache` for one open-with import. Unique per
+ * call so a leftover from a killed process can never be mistaken for the copy
+ * just made; cacheDir so Android reclaims whatever cleanup misses.
+ */
+function scratchDirectory(): Directory {
+  const dir = new Directory(Paths.cache, 'import-scratch', `${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
+  dir.create({ intermediates: true, idempotent: true });
+  return dir;
+}
+
+/**
+ * Copy `source` into `dir` and return the copy, or null if the provider can't
+ * be read. Copying into a *directory* is the one channel expo-file-system
+ * exposes a content provider's DISPLAY_NAME through: the native side names
+ * the copy from it. JS-side `File#name` never queries it — it is just the
+ * URI's last path segment, parsed as a string.
+ */
+async function copyWithProviderName(source: File, dir: Directory): Promise<File | null> {
+  try {
+    await source.copy(dir);
+    return dir.list().find((entry): entry is File => entry instanceof File) ?? null;
+  } catch (error) {
+    console.warn(`could not resolve a display name for "${source.uri}":`, error);
+    return null;
+  }
+}
+
+/**
  * Import a ROM the system handed us — an `ACTION_VIEW` intent from a file
  * manager, whose URI reaches JS through React Native's `Linking`. Same
  * dedup-then-copy path as the picker; the only difference is that the name
@@ -192,24 +220,50 @@ export async function importRomFromUri(
   consoles: ConsoleSpec[],
   uri: string
 ): Promise<OpenedRomImport> {
-  const source = new File(uri);
-  // `File#name` resolves a content:// URI through the provider's
-  // DISPLAY_NAME, falling back to the URI's last path segment. A provider
-  // that answers neither with an extension lands on `unsupported_file`,
-  // which is the right answer to the broad MIME filter that got us here.
-  const name = source.name;
-  const outcome = unwrapOutcome(
-    consoles,
-    name,
-    await importRomFile(db, consoles, source, name, source.size ?? 0)
-  );
-  if (outcome.status === 'duplicate') return outcome;
+  let source = new File(uri);
+  // `File#name` is the URI's last path segment — some file managers send
+  // ACTION_VIEW URIs ending in an opaque token (`enc=encoded=…`), which would
+  // fail the extension check no matter what the file is. Those get a second
+  // chance below: a scratch copy whose name the native side resolves through
+  // the provider's DISPLAY_NAME, imported in the source's place (it's local,
+  // so the hash and the roms/ copy that follow stay cheap).
+  let name = source.name;
+  let scratch: Directory | null = null;
 
-  const rom = await getRom(db, outcome.id);
-  if (!rom) {
-    throw new RomImportError('unreadable_file', { name }, `Imported "${name}" is missing.`);
+  try {
+    if (!consoleForExtension(consoles, extensionOf(name))) {
+      if ((source.size ?? 0) > Paths.availableDiskSpace) {
+        throw new RomImportError('no_space', { name }, `Not enough free space to import "${name}".`);
+      }
+      scratch = scratchDirectory();
+      const copied = await copyWithProviderName(source, scratch);
+      if (copied) {
+        source = copied;
+        name = copied.name;
+      }
+      // copied === null falls through with the URI-derived name and errors
+      // exactly as it would have without the fallback.
+    }
+
+    const outcome = unwrapOutcome(
+      consoles,
+      name,
+      await importRomFile(db, consoles, source, name, source.size ?? 0)
+    );
+    if (outcome.status === 'duplicate') return outcome;
+
+    const rom = await getRom(db, outcome.id);
+    if (!rom) {
+      throw new RomImportError('unreadable_file', { name }, `Imported "${name}" is missing.`);
+    }
+    return { status: 'imported', rom };
+  } finally {
+    try {
+      scratch?.delete();
+    } catch {
+      // Deliberately swallowed: cacheDir cleanup must not mask the outcome.
+    }
   }
-  return { status: 'imported', rom };
 }
 
 /** What the batch is doing right now, for a progress overlay. */
