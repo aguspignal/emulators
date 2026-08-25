@@ -1,85 +1,265 @@
 package expo.modules.azaharcore
 
+import android.graphics.Bitmap
 import android.net.Uri
+import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
-import java.io.FileInputStream
-import java.io.InputStream
-import java.security.MessageDigest
+import java.io.FileOutputStream
 
-// Stub implementation of the @emulators/core-interface contract.
-// TODO: bridge these calls into Azahar (C++ core via JNI).
+private class RomLoadException(uri: String, cause: Throwable? = null) :
+  CodedException("ERR_ROM_LOAD", "Failed to load ROM from $uri", cause)
+
+private class NoRomLoadedException :
+  CodedException("ERR_NO_ROM", "No ROM is loaded", null)
+
+private class SaveStateException(slot: Int, loading: Boolean) :
+  CodedException(
+    "ERR_SAVESTATE",
+    "Failed to ${if (loading) "load" else "save"} state in slot $slot",
+    null,
+  )
+
+private class ScreenshotException(reason: String, cause: Throwable? = null) :
+  CodedException("ERR_SCREENSHOT", "Failed to capture a screenshot: $reason", cause)
+
+private class SaveDataException(reason: String) :
+  CodedException("ERR_SAVE_DATA", "Failed to delete save data: $reason", null)
+
+/** The only shape a ROM hash may have; anything else is a path-traversal risk. */
+private val SHA1_PATTERN = Regex("^[0-9a-f]{40}$")
+
+// Implements the @emulators/core-interface contract on top of the native
+// Azahar engine (modules/azahar-core/android/src/main/cpp). This class owns
+// the idle/running/paused state machine; the engine just obeys.
 class AzaharCoreModule : Module() {
+  @Volatile
+  private var state = "idle"
+
+  @Volatile
+  private var currentRom: ResolvedRom? = null
+
+  /** Set only when the activity lifecycle paused a running game, so only such a game resumes. */
+  @Volatile
+  private var resumeOnForeground = false
+
   private val context
     get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+
+  private fun setState(next: String) {
+    if (state != next) {
+      state = next
+      sendEvent("stateChange", mapOf("state" to next))
+    }
+  }
+
+  private fun emitError(message: String) {
+    sendEvent("error", mapOf("message" to message))
+  }
 
   override fun definition() = ModuleDefinition {
     Name("AzaharCore")
 
     Events("stateChange", "error")
 
+    // The core roots its whole user tree (config/sdmc/nand/states) here, and
+    // the AndroidUtils statics resolve relative core paths against the same
+    // directory — set it before anything can touch a file.
+    OnCreate {
+      appContext.reactContext?.let {
+        AzaharCoreNative.initUserDir(RomFiles.userDir(it))
+      }
+      // Errors the emulation thread surfaces mid-game (the engine parks the
+      // core and reports; JS decides whether to exit).
+      AzaharCoreNative.errorSink = { message -> emitError(message) }
+    }
+
+    // AsyncFunctions run on the module's background dispatcher, so blocking
+    // on file copies and emu-thread futures here is fine.
     AsyncFunction("loadRom") { uri: String ->
+      val rom = try {
+        RomFiles.resolve(context, uri)
+      } catch (e: Exception) {
+        emitError("Could not read ROM: ${e.message}")
+        throw RomLoadException(uri, e)
+      }
+      if (!AzaharCoreNative.nativeLoadRom(rom.path)) {
+        emitError("Azahar could not load this ROM")
+        throw RomLoadException(uri)
+      }
+      currentRom = rom
+      resumeOnForeground = false
+      AzaharCoreNative.clearKeys()
+      // Azahar keys saves by title id; remember which title this hash boots so
+      // deleteSaveData(sha1) can clean up later without the ROM.
+      RomFiles.writeTitleIdMap(context, rom.sha1, AzaharCoreNative.nativeGetTitleId())
+      setState("paused") // contract: paused at frame 0; start() begins from here
+      AzaharCoreView.refreshAllLayouts()
+
       mapOf(
-        "title" to uri.substringAfterLast('/'),
+        "title" to AzaharCoreNative.nativeGetGameTitle().ifBlank { rom.fallbackTitle },
+        // One console per app here, so there is no header sniffing to do.
         "console" to "3ds",
-        "size" to 0,
-        // Hashed for real even though nothing emulates yet: the library stores
-        // this per ROM, and a missing key would arrive in JS as `undefined`,
-        // which SQLite refuses to bind.
-        "sha1" to sha1Of(uri),
+        "size" to rom.size,
+        "sha1" to rom.sha1,
       )
     }
 
-    AsyncFunction("unloadRom") {}
+    AsyncFunction("unloadRom") {
+      AzaharCoreNative.nativeUnloadRom()
+      AzaharCoreNative.clearKeys()
+      currentRom = null
+      resumeOnForeground = false
+      setState("idle")
+    }
 
-    Function("start") {}
-    Function("pause") {}
-    Function("resume") {}
-    Function("reset") {}
+    Function("start") {
+      if (state == "paused") {
+        AzaharCoreNative.nativeSetPaused(false)
+        setState("running")
+      }
+    }
 
-    Function("getState") { "idle" }
+    Function("pause") {
+      if (state == "running") {
+        AzaharCoreNative.nativeSetPaused(true)
+        setState("paused")
+        resumeOnForeground = false // an explicit pause outlives a trip to the background
+      }
+    }
 
-    Function("setButton") { button: String, pressed: Boolean -> }
-    Function("setTouch") { x: Double, y: Double, pressed: Boolean -> }
+    Function("resume") {
+      if (state == "paused") {
+        AzaharCoreNative.nativeSetPaused(false)
+        setState("running")
+      }
+    }
 
-    AsyncFunction("saveState") { slot: Int -> }
-    AsyncFunction("loadState") { slot: Int -> }
-    AsyncFunction("deleteState") { slot: Int -> }
-    AsyncFunction("deleteSaveData") { sha1: String -> }
-    AsyncFunction("captureScreenshot") { uri: String -> }
+    Function("reset") {
+      AzaharCoreNative.nativeReset()
+    }
 
-    Function("setVolume") { volume: Double -> }
-    Function("setSpeed") { multiplier: Double -> }
+    Function("getState") { state }
+
+    // The emulation thread and the audio stream are native: without this they
+    // keep running (and playing) with the app backgrounded or the screen off,
+    // whatever JS does. The emulated 3DS writes its saves through the file
+    // system as games commit them, so there is no flush call here.
+    OnActivityEntersBackground {
+      if (state == "running") {
+        AzaharCoreNative.nativeSetPaused(true)
+        setState("paused")
+        resumeOnForeground = true
+      }
+    }
+
+    OnActivityEntersForeground {
+      if (resumeOnForeground) {
+        resumeOnForeground = false
+        if (state == "paused") {
+          AzaharCoreNative.nativeSetPaused(false)
+          setState("running")
+        }
+      }
+    }
+
+    Function("setButton") { button: String, pressed: Boolean ->
+      AzaharCoreNative.updateKey(button, pressed)
+    }
+
+    // Coordinates arrive already mapped into bottom-screen native pixels by the
+    // shared UI, which aspect-fits the composited frame the same way the
+    // native view does.
+    Function("setTouch") { x: Double, y: Double, pressed: Boolean ->
+      AzaharCoreNative.nativeSetTouch(x.toInt(), y.toInt(), pressed)
+    }
+
+    AsyncFunction("saveState") { slot: Int ->
+      if (currentRom == null) throw NoRomLoadedException()
+      if (!AzaharCoreNative.nativeSaveState(slot)) {
+        throw SaveStateException(slot, loading = false)
+      }
+    }
+
+    AsyncFunction("loadState") { slot: Int ->
+      if (currentRom == null) throw NoRomLoadedException()
+      if (!AzaharCoreNative.nativeLoadState(slot)) {
+        throw SaveStateException(slot, loading = true)
+      }
+    }
+
+    AsyncFunction("deleteState") { slot: Int ->
+      if (currentRom == null) throw NoRomLoadedException()
+      AzaharCoreNative.nativeDeleteState(slot) // absent slot: fine
+    }
+
+    // Takes the hash instead of acting on the loaded ROM: the library deletes
+    // saves for a ROM it is removing, which by definition isn't playing.
+    AsyncFunction("deleteSaveData") { sha1: String ->
+      if (!SHA1_PATTERN.matches(sha1)) {
+        throw SaveDataException("'$sha1' is not a ROM hash")
+      }
+      if (currentRom?.sha1 == sha1) {
+        throw SaveDataException("that ROM is loaded")
+      }
+      // No map entry means this ROM never booted here — nothing to delete.
+      val titleId = RomFiles.readTitleIdMap(context, sha1) ?: return@AsyncFunction
+      AzaharCoreNative.nativeDeleteSaveData(titleId)
+      RomFiles.deleteTitleIdMap(context, sha1)
+    }
+
+    // Encodes the frame natively and writes it where the caller asked; pixels
+    // never reach JS. The frame is both screens stacked, which is the aspect
+    // ratio SlotSheet's thumbnails already assume.
+    AsyncFunction("captureScreenshot") { uri: String ->
+      val parsed = Uri.parse(uri)
+      val path = when (parsed.scheme) {
+        null, "", "file" -> parsed.path ?: uri
+        else -> throw ScreenshotException("unsupported URI scheme ${parsed.scheme}")
+      }
+      val frame = AzaharCoreNative.nativeCaptureFrame() ?: throw NoRomLoadedException()
+      val width = frame[0]
+      val height = frame[1]
+      if (width <= 0 || height <= 0) {
+        throw ScreenshotException("empty frame")
+      }
+      // Reads the pixels straight out of the JNI array, past the two dimensions.
+      val bitmap = Bitmap.createBitmap(frame, 2, width, width, height, Bitmap.Config.ARGB_8888)
+      try {
+        val file = File(path)
+        file.parentFile?.mkdirs()
+        FileOutputStream(file).use { out -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out) }
+      } catch (e: Exception) {
+        throw ScreenshotException("could not write $path", e)
+      } finally {
+        bitmap.recycle()
+      }
+    }
+
+    Function("setVolume") { volume: Double ->
+      AzaharCoreNative.nativeSetVolume(volume.coerceIn(0.0, 1.0).toFloat())
+    }
+
+    Function("setSpeed") { multiplier: Double ->
+      AzaharCoreNative.nativeSetSpeed(multiplier.toFloat())
+    }
+
+    // Last resort: JS normally unloads on unmount, but a dev reload or an
+    // activity teardown can skip that. Idempotent when nothing is loaded.
+    OnDestroy {
+      AzaharCoreNative.errorSink = null
+      AzaharCoreNative.nativeUnloadRom()
+      currentRom = null
+    }
 
     View(AzaharCoreView::class) {
-      // Stub, like the rest: the shared UI sends "vertical"/"horizontal" per
-      // orientation; the real Azahar view will arrange its screens from it.
-      Prop("screenLayout") { _: AzaharCoreView, _: String? -> }
-    }
-  }
-
-  /** Empty string when the ROM can't be read — the contract allows that. */
-  private fun sha1Of(uri: String): String {
-    return try {
-      val parsed = Uri.parse(uri)
-      val stream: InputStream = when (parsed.scheme) {
-        null, "", "file" -> FileInputStream(File(parsed.path ?: uri))
-        else -> context.contentResolver.openInputStream(parsed)
-      } ?: return ""
-      stream.use { input ->
-        val digest = MessageDigest.getInstance("SHA-1")
-        val buffer = ByteArray(64 * 1024)
-        while (true) {
-          val read = input.read(buffer)
-          if (read < 0) break
-          digest.update(buffer, 0, read)
-        }
-        digest.digest().joinToString("") { "%02x".format(it) }
+      // "horizontal" puts the two screens side by side (landscape); anything
+      // else stacks them. The shared EmulatorScreen sets it per orientation.
+      Prop("screenLayout") { view: AzaharCoreView, layout: String? ->
+        view.setScreenLayout(layout == "horizontal")
       }
-    } catch (e: Exception) {
-      ""
     }
   }
 }

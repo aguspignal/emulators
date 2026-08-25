@@ -8,11 +8,67 @@ version = '0.1.0'
 
 android {
   namespace "expo.modules.azaharcore"
+  // r27+: cryptopp's NEON paths and 16 KB page-size support both need it.
+  ndkVersion "27.1.12297006"
   defaultConfig {
     versionCode 1
     versionName "0.1.0"
+    // Azahar's floor is Android 10 (GLES 3.2-era devices; its NDK code uses
+    // API 26+ symbols). The app's own minSdk is raised to match in app.json.
+    minSdkVersion 29
+    externalNativeBuild {
+      cmake {
+        // c++_shared: Azahar is C++ and the RN app already ships libc++_shared.so.
+        // ANDROID_ARM_NEON: cryptopp does not build without it.
+        // FLEXIBLE_PAGE_SIZES: 16 KB pages for the static externals.
+        // CMAKE_PROJECT_citra_INCLUDE: the vendor root is the CMake entry point
+        // (its build assumes top level); this hook injects our option overrides
+        // and defer-adds src/main/cpp, which defines azahar-jni.
+        arguments "-DANDROID_STL=c++_shared",
+                  "-DANDROID_ARM_NEON=true",
+                  "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+                  "-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
+                  "-DCMAKE_PROJECT_citra_INCLUDE=" +
+                      file("src/main/cpp/azahar_inject.cmake").absolutePath.replace('\\', '/')
+        // The vendor tree also defines citra-android (its own frontend) —
+        // never ask ninja for anything but our JNI lib.
+        targets "azahar-jni"
+      }
+    }
+    ndk {
+      abiFilters "arm64-v8a", "x86_64"
+    }
+    consumerProguardFiles "consumer-rules.pro"
+  }
+  externalNativeBuild {
+    cmake {
+      path "vendor/azahar/CMakeLists.txt"
+      // Azahar requires CMake >= 3.25; AGP's default 3.22.1 cannot build it.
+      version "3.31.6"
+    }
   }
   lintOptions {
     abortOnError false
   }
 }
+
+// Azahar's root CMakeLists copies its pre-commit hook into .git/hooks, which
+// cannot exist here: as a git submodule the vendor tree's .git is a gitdir
+// pointer *file*. Neutralize that one block in place before any CMake run.
+// Idempotent (the needle is gone after the first pass); .gitmodules carries
+// `ignore = dirty` for this submodule so the edit never shows up in git status.
+def patchAzaharCMake = tasks.register("patchAzaharCMake") {
+  def rootCMake = file("vendor/azahar/CMakeLists.txt")
+  inputs.file(rootCMake)
+  outputs.upToDateWhen { !rootCMake.getText("UTF-8").contains('/.git/hooks/pre-commit)') }
+  doLast {
+    def needle = 'if(NOT EXISTS ${PROJECT_SOURCE_DIR}/.git/hooks/pre-commit)'
+    def text = rootCMake.getText("UTF-8")
+    if (text.contains(needle)) {
+      rootCMake.setText(
+          text.replace(needle, 'if(FALSE) # patched by azahar-core: submodule .git is a file'),
+          "UTF-8")
+    }
+  }
+}
+preBuild.dependsOn(patchAzaharCMake)
