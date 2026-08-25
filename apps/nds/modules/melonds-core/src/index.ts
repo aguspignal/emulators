@@ -6,13 +6,17 @@ import type {
   EmulatorEventName,
   EmulatorState,
   RomInfo,
+  SharedFileSource,
 } from '@emulators/core-interface';
 
 type NativeEvents = {
   [E in EmulatorEventName]: (payload: EmulatorEventMap[E]) => void;
+} & {
+  sharedFile: (payload: { uri: string }) => void;
 };
 
 declare class MelondsCoreNativeModule extends NativeModule<NativeEvents> {
+  initialSharedFile(): string | null;
   loadRom(uri: string): Promise<RomInfo>;
   unloadRom(): Promise<void>;
   start(): void;
@@ -37,6 +41,19 @@ const native = requireNativeModule<MelondsCoreNativeModule>('MelondsCore');
 export const EmulatorView = requireNativeView<
   ViewProps & { screenLayout?: 'vertical' | 'horizontal' }
 >('MelondsCore');
+
+/**
+ * ROMs shared *to* the app (ACTION_SEND). The share sheet is the one-gesture
+ * path on Samsung, whose My Files resolves unknown extensions to an
+ * empty-string MIME that no VIEW intent filter can ever match — and a SEND
+ * file arrives in the intent extras, where React Native's Linking can't see
+ * it, so this crosses the bridge natively.
+ */
+export const sharedFiles: SharedFileSource = {
+  getInitialFile: () => native.initialSharedFile(),
+  addListener: (listener) =>
+    native.addListener('sharedFile', (payload) => listener(payload.uri)),
+};
 
 /** melonDS core, exposed through the shared @emulators/core-interface contract. */
 export const core: EmulatorCore = {

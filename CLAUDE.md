@@ -53,10 +53,10 @@ Each sub-project has its own CLAUDE.md with specifics.
 
 Done — details live in each area's own CLAUDE.md:
 
-- `apps/gba` is fully playable end to end: real mGBA core over JNI (`vendor/mgba` git submodule — run `git submodule update --init` after cloning), battery saves force-flushed on backgrounding, nine savestate slots with thumbnails, slot-0 auto-save/resume, and "Open with" from file managers plus share-to-app (`useOpenedRom` + `importRomFromUri`; SEND files bridge natively via `AppConfig.sharedFiles` since `Linking` can't see intent extras — Samsung My Files can't "open" unknown extensions at all. `apps/nds`/`threeds` still need their own `app.json` intent filters and `sharedFiles` bridge — the JS half is shared).
+- `apps/gba` is fully playable end to end: real mGBA core over JNI (`vendor/mgba` git submodule — run `git submodule update --init` after cloning), battery saves force-flushed on backgrounding, nine savestate slots with thumbnails, slot-0 auto-save/resume, and "Open with" from file managers plus share-to-app (`useOpenedRom` + `importRomFromUri`; SEND files bridge natively via `AppConfig.sharedFiles` since `Linking` can't see intent extras — Samsung My Files can't "open" unknown extensions at all. `apps/nds` has the same filters and bridge; `apps/threeds` still needs its own — the JS half is shared).
 - ROM library (`packages/storage`): SQLite-backed poster-grid Home with single-file, whole-folder, and open-with import (MD5 dedup → copy into `roms/`), favorite/delete, boot-on-tap, and offline-matched cover art from the libretro CDN with DS banner fallback (`scripts/build-cover-index.mjs` generates the per-app indexes).
 - Shared UI (`packages/ui`): multi-touch gamepad with diagonals and haptics, pause menu (save/load slots, mute, speed-up, reset, auto-save-and-exit, cheats stub), portrait+landscape emulator layouts, Settings (language, haptics, gamepad size/opacity per orientation, Legal), Help screen, i18next translations (ten catalogs), bundled Tourney/Roboto typography. Terms/Privacy URLs are set for gba only; the nds/threeds rows stay inert until their pages are hosted.
-- The melonDS and Azahar Kotlin modules are stubs: `loadRom` hashes the ROM for real, everything else is a no-op.
+- The Azahar Kotlin module is a stub: `loadRom` hashes the ROM for real, everything else is a no-op.
 - iOS/store submission config is out of scope.
 
 Still to build: 3DS SMDH icons (needs ExeFS decryption), gamepad button remapping and repositioning, and user-selectable launcher icons (planned in `docs/app_icon_plan.md`).
