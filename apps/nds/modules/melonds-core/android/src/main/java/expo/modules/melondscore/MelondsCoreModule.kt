@@ -1,7 +1,9 @@
 package expo.modules.melondscore
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Build
 import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
@@ -59,10 +61,41 @@ class MelondsCoreModule : Module() {
     sendEvent("error", mapOf("message" to message))
   }
 
+  /**
+   * The file an ACTION_SEND intent carries. SEND puts the content URI in the
+   * EXTRA_STREAM extra (mirrored in clipData), never in the intent data, so
+   * React Native's Linking can't see it — this module is the only bridge.
+   * VIEW intents stay with Linking and never reach this.
+   */
+  private fun sharedStreamUri(intent: Intent?): String? {
+    if (intent?.action != Intent.ACTION_SEND) return null
+    val stream = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+    } else {
+      @Suppress("DEPRECATION")
+      intent.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri
+    }
+    val uri = stream
+      ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
+    return uri?.toString()
+  }
+
   override fun definition() = ModuleDefinition {
     Name("MelondsCore")
 
-    Events("stateChange", "error")
+    Events("stateChange", "error", "sharedFile")
+
+    // Cold start: a share launched the activity, and the launching intent is
+    // still attached to it when JS comes up and asks.
+    Function("initialSharedFile") {
+      sharedStreamUri(appContext.currentActivity?.intent)
+    }
+
+    // Warm delivery: the activity is singleTask, so a share while the app is
+    // running lands in onNewIntent instead of launching a second activity.
+    OnNewIntent { intent ->
+      sharedStreamUri(intent)?.let { sendEvent("sharedFile", mapOf("uri" to it)) }
+    }
 
     // melonDS resolves its "local" files (BIOS, firmware, the ROM list) against
     // a working directory. This build supplies none of them, but the path still
