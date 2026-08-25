@@ -4,3 +4,9 @@
 [submodule "apps/nds/modules/melonds-core/android/vendor/melonds"]
 	path = apps/nds/modules/melonds-core/android/vendor/melonds
 	url = https://github.com/melonDS-emu/melonDS.git
+[submodule "apps/threeds/modules/azahar-core/android/vendor/azahar"]
+	path = apps/threeds/modules/azahar-core/android/vendor/azahar
+	url = https://github.com/azahar-emu/azahar.git
+	# The module's Gradle patches one CMake line in the checkout (see
+	# azahar-core/android/build.gradle); keep that edit out of git status.
+	ignore = dirty
