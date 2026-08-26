@@ -30,6 +30,20 @@ set(ENABLE_LTO OFF CACHE BOOL "" FORCE)
 set(ENABLE_DISCORD_RPC OFF CACHE BOOL "" FORCE)
 set(CITRA_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
 
+# dist/compatibility_list is a nested git submodule that EAS Build's project
+# upload drops, and the vendor root configure_file()s its .qrc unconditionally.
+# With Qt off nothing consumes the copy, so an equivalent stub keeps configure
+# alive; the .json needs no stub — the vendor CMake writes an empty fallback.
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/dist/compatibility_list/compatibility_list.qrc")
+    file(WRITE "${CMAKE_SOURCE_DIR}/dist/compatibility_list/compatibility_list.qrc"
+"<RCC>
+  <qresource prefix=\"compatibility_list\">
+      <file>compatibility_list.json</file>
+  </qresource>
+</RCC>
+")
+endif()
+
 # Define our JNI target once the whole vendor tree (citra_core & friends) has
 # been processed. Deferred execution may not create subdirectories, so the
 # target definitions live in an include()d file. CMAKE_CURRENT_LIST_DIR is the
