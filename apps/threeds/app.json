@@ -3,7 +3,9 @@
     "name": "3DS Emulator",
     "slug": "threeds",
     "version": "1.1.0",
-    "platforms": ["android"],
+    "platforms": [
+      "android"
+    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -37,20 +39,34 @@
               {
                 "fontFamily": "Tourney",
                 "fontDefinitions": [
-                  { "path": "../../packages/ui/assets/fonts/Tourney-Black.ttf", "weight": 900 }
+                  {
+                    "path": "../../packages/ui/assets/fonts/Tourney-Black.ttf",
+                    "weight": 900
+                  }
                 ]
               },
               {
                 "fontFamily": "Roboto",
                 "fontDefinitions": [
-                  { "path": "../../packages/ui/assets/fonts/Roboto-Regular.ttf", "weight": 400 },
-                  { "path": "../../packages/ui/assets/fonts/Roboto-SemiBold.ttf", "weight": 600 }
+                  {
+                    "path": "../../packages/ui/assets/fonts/Roboto-Regular.ttf",
+                    "weight": 400
+                  },
+                  {
+                    "path": "../../packages/ui/assets/fonts/Roboto-SemiBold.ttf",
+                    "weight": 600
+                  }
                 ]
               }
             ]
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "063a2baa-ca31-44cd-a583-a3ab780468b8"
+      }
+    }
   }
 }
