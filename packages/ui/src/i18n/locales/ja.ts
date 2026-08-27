@@ -103,6 +103,8 @@ export default {
     bootFailedTitle: 'ゲームを起動できませんでした',
     bootFailedMessage:
       'このゲームを起動できませんでした。ROMファイルが見つからないか、破損しているか、対応していない可能性があります。',
+    bootEncryptedMessage:
+      'このROMは暗号化されているため起動できません。復号済みのROMをインポートしてください。',
     problemTitle: 'エミュレーターの問題',
     problemMessage: 'エミュレーターに問題が発生しました。ゲームが正しく動作しない可能性があります。',
     saveFailed: 'ステートセーブに失敗しました',

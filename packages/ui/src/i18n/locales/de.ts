@@ -113,6 +113,8 @@ export default {
     bootFailedTitle: 'Spiel konnte nicht gestartet werden',
     bootFailedMessage:
       'Dieses Spiel konnte nicht gestartet werden. Die ROM-Datei fehlt, ist beschädigt oder wird nicht unterstützt.',
+    bootEncryptedMessage:
+      'Diese ROM ist verschlüsselt, verschlüsselte Spiele können nicht gespielt werden. Importiere eine entschlüsselte Kopie der ROM.',
     problemTitle: 'Emulator-Problem',
     problemMessage:
       'Der Emulator hat ein Problem festgestellt. Das Spiel funktioniert möglicherweise nicht richtig.',

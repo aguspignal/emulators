@@ -114,6 +114,8 @@ export default {
     bootFailedTitle: "Couldn't start game",
     bootFailedMessage:
       "This game couldn't be started. The ROM file may be missing, corrupted, or unsupported.",
+    bootEncryptedMessage:
+      'This ROM is encrypted, and encrypted games cannot be played. Import a decrypted copy of the ROM.',
     problemTitle: 'Emulator problem',
     problemMessage: 'The emulator hit a problem. The game may not work correctly.',
     saveFailed: "Couldn't save state",

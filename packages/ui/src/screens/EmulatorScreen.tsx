@@ -65,10 +65,14 @@ export function EmulatorScreen({ route, navigation }: RootScreenProps<"Emulator"
         info = await core.loadRom(romUri);
       } catch (error) {
         if (cancelled) return;
+        // Expo rejections carry the native exception's code. ERR_ROM_ENCRYPTED
+        // is the 3DS core refusing an encrypted dump — the one boot failure
+        // the player can fix (decrypt and re-import), so it gets its own copy.
+        const encrypted = (error as { code?: string }).code === "ERR_ROM_ENCRYPTED";
         showErrorAlert(
           i18n.t("emulator.bootFailedTitle"),
           error,
-          i18n.t("emulator.bootFailedMessage"),
+          i18n.t(encrypted ? "emulator.bootEncryptedMessage" : "emulator.bootFailedMessage"),
           () => navigation.goBack(),
         );
         return;

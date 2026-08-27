@@ -176,7 +176,8 @@ object AzaharCoreNative {
 
   external fun nativeGetCoreVersion(): String
   external fun nativeSetUserDir(dir: String)
-  external fun nativeLoadRom(path: String): Boolean
+  /** 0 on success, -1 for the engine's surface timeout, else Core::System::ResultStatus. */
+  external fun nativeLoadRom(path: String): Int
   external fun nativeUnloadRom()
   external fun nativeSetPaused(paused: Boolean)
   external fun nativeReset()

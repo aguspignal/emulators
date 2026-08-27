@@ -100,6 +100,7 @@ export default {
   emulator: {
     bootFailedTitle: '无法启动游戏',
     bootFailedMessage: '无法启动此游戏。ROM 文件可能缺失、损坏或不受支持。',
+    bootEncryptedMessage: '该 ROM 已加密，无法运行加密的游戏。请导入解密后的 ROM。',
     problemTitle: '模拟器出现问题',
     problemMessage: '模拟器遇到了问题，游戏可能无法正常运行。',
     saveFailed: '无法保存即时存档',

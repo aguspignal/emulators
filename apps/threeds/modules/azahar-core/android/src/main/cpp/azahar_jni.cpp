@@ -54,8 +54,8 @@ void SetUserDir(JNIEnv* env, jclass, jstring dir) {
     EmulatorEngine::instance().setUserDir(toString(env, dir));
 }
 
-jboolean LoadRom(JNIEnv* env, jclass, jstring path) {
-    return EmulatorEngine::instance().loadRom(toString(env, path)) ? JNI_TRUE : JNI_FALSE;
+jint LoadRom(JNIEnv* env, jclass, jstring path) {
+    return static_cast<jint>(EmulatorEngine::instance().loadRom(toString(env, path)));
 }
 
 void UnloadRom(JNIEnv*, jclass) {
@@ -156,7 +156,7 @@ void TryPresent(JNIEnv*, jclass) {
 const JNINativeMethod kMethods[] = {
     {"nativeGetCoreVersion", "()Ljava/lang/String;", reinterpret_cast<void*>(GetCoreVersion)},
     {"nativeSetUserDir", "(Ljava/lang/String;)V", reinterpret_cast<void*>(SetUserDir)},
-    {"nativeLoadRom", "(Ljava/lang/String;)Z", reinterpret_cast<void*>(LoadRom)},
+    {"nativeLoadRom", "(Ljava/lang/String;)I", reinterpret_cast<void*>(LoadRom)},
     {"nativeUnloadRom", "()V", reinterpret_cast<void*>(UnloadRom)},
     {"nativeSetPaused", "(Z)V", reinterpret_cast<void*>(SetPaused)},
     {"nativeReset", "()V", reinterpret_cast<void*>(Reset)},

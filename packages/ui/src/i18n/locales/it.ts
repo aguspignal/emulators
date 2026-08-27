@@ -112,6 +112,8 @@ export default {
     bootFailedTitle: 'Impossibile avviare il gioco',
     bootFailedMessage:
       'Impossibile avviare questo gioco. Il file ROM potrebbe mancare, essere danneggiato o non supportato.',
+    bootEncryptedMessage:
+      'Questa ROM è cifrata e i giochi cifrati non possono essere avviati. Importa una copia decifrata della ROM.',
     problemTitle: "Problema dell'emulatore",
     problemMessage:
       "L'emulatore ha riscontrato un problema. Il gioco potrebbe non funzionare correttamente.",
