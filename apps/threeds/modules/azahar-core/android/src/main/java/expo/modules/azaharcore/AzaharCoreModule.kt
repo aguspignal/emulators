@@ -9,8 +9,16 @@ import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
 import java.io.FileOutputStream
 
-private class RomLoadException(uri: String, cause: Throwable? = null) :
-  CodedException("ERR_ROM_LOAD", "Failed to load ROM from $uri", cause)
+private class RomLoadException(uri: String, reason: String? = null, cause: Throwable? = null) :
+  CodedException(
+    "ERR_ROM_LOAD",
+    "Failed to load ROM from $uri${reason?.let { ": $it" } ?: ""}",
+    cause,
+  )
+
+/** Own code so the shared UI can tell the player to decrypt, not re-dump. */
+private class RomEncryptedException(uri: String) :
+  CodedException("ERR_ROM_ENCRYPTED", "The ROM at $uri is encrypted; Azahar cannot decrypt", null)
 
 private class NoRomLoadedException :
   CodedException("ERR_NO_ROM", "No ROM is loaded", null)
@@ -30,6 +38,26 @@ private class SaveDataException(reason: String) :
 
 /** The only shape a ROM hash may have; anything else is a path-traversal risk. */
 private val SHA1_PATTERN = Regex("^[0-9a-f]{40}$")
+
+/** Core::System::ResultStatus::ErrorLoader_ErrorEncrypted (vendor src/core/core.h). */
+private const val LOAD_ERROR_ENCRYPTED = 5
+
+/**
+ * Human-readable reason for a nativeLoadRom status — for the log and the
+ * rejection message, not the alert (the shared UI localizes that). The values
+ * are Core::System::ResultStatus (vendor src/core/core.h); -1 is the engine's
+ * own surface timeout.
+ */
+private fun loadFailureReason(status: Int): String = when (status) {
+  -1 -> "the emulator view never provided a rendering surface"
+  -2 -> "the core failed while booting this ROM (native exception; see logcat)"
+  2 -> "no loader recognizes this file type"
+  5 -> "the ROM is encrypted, and Azahar cannot decrypt"
+  6 -> "the ROM file format is invalid"
+  7 -> "GBA Virtual Console titles are not supported"
+  10 -> "required system files are missing"
+  else -> "Azahar load status $status"
+}
 
 // Implements the @emulators/core-interface contract on top of the native
 // Azahar engine (modules/azahar-core/android/src/main/cpp). This class owns
@@ -83,11 +111,14 @@ class AzaharCoreModule : Module() {
         RomFiles.resolve(context, uri)
       } catch (e: Exception) {
         emitError("Could not read ROM: ${e.message}")
-        throw RomLoadException(uri, e)
+        throw RomLoadException(uri, cause = e)
       }
-      if (!AzaharCoreNative.nativeLoadRom(rom.path)) {
-        emitError("Azahar could not load this ROM")
-        throw RomLoadException(uri)
+      val status = AzaharCoreNative.nativeLoadRom(rom.path)
+      if (status != 0) {
+        val reason = loadFailureReason(status)
+        emitError("Azahar could not load this ROM: $reason")
+        if (status == LOAD_ERROR_ENCRYPTED) throw RomEncryptedException(uri)
+        throw RomLoadException(uri, reason)
       }
       currentRom = rom
       resumeOnForeground = false

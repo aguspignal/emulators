@@ -31,10 +31,17 @@ public:
 
     void setUserDir(const std::string& dir);
 
-    /// Blocks until the core accepted or rejected the ROM. On success the
-    /// emulation thread is parked before its first frame (contract: paused at
-    /// frame 0). `path` is a plain absolute path (no "!" prefix).
-    bool loadRom(const std::string& path);
+    /// The view never delivered a surface, so the core was not even asked.
+    static constexpr int kLoadNoSurface = -1;
+    /// System::Load threw instead of returning a status (details in logcat).
+    static constexpr int kLoadException = -2;
+
+    /// Blocks until the core accepted or rejected the ROM. Returns 0 on
+    /// success, kLoadNoSurface, or the Core::System::ResultStatus that
+    /// System::Load failed with. On success the emulation thread is parked
+    /// before its first frame (contract: paused at frame 0). `path` is a
+    /// plain absolute path (no "!" prefix).
+    int loadRom(const std::string& path);
     void unloadRom();
 
     void setPaused(bool paused);
@@ -81,7 +88,7 @@ private:
         std::promise<bool> done;
     };
 
-    void emuLoop(std::string romPath, std::promise<bool>* loadResult);
+    void emuLoop(std::string romPath, std::promise<int>* loadResult);
     /// Runs fn on the emulation thread between RunLoop iterations (works while
     /// paused) and returns its result; false if the thread is gone.
     bool runOnEmuThread(std::function<bool()> fn);

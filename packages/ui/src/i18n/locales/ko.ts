@@ -104,6 +104,8 @@ export default {
     bootFailedTitle: '게임을 시작할 수 없습니다',
     bootFailedMessage:
       '이 게임을 시작할 수 없습니다. ROM 파일이 없거나 손상되었거나 지원되지 않을 수 있습니다.',
+    bootEncryptedMessage:
+      '이 롬은 암호화되어 있어 실행할 수 없습니다. 복호화된 롬을 가져오세요.',
     problemTitle: '에뮬레이터 문제',
     problemMessage: '에뮬레이터에 문제가 발생했습니다. 게임이 제대로 작동하지 않을 수 있습니다.',
     saveFailed: '상태를 저장할 수 없습니다',

@@ -14,6 +14,7 @@
 #include "core/frontend/applets/default_applets.h"
 #include "core/frontend/framebuffer_layout.h"
 #include "core/hle/kernel/kernel.h"
+#include "core/hle/service/service.h"
 #include "core/loader/loader.h"
 #include "core/savestate.h"
 #include "video_core/gpu.h"
@@ -86,9 +87,9 @@ void EmulatorEngine::setUserDir(const std::string& dir) {
     FileUtil::SetCurrentDir(dir);
 }
 
-bool EmulatorEngine::loadRom(const std::string& path) {
+int EmulatorEngine::loadRom(const std::string& path) {
     unloadRom();
-    std::promise<bool> result;
+    std::promise<int> result;
     auto future = result.get_future();
     {
         std::scoped_lock lk(mMutex);
@@ -100,11 +101,11 @@ bool EmulatorEngine::loadRom(const std::string& path) {
     }
     applyVolume();
     mThread = std::thread(&EmulatorEngine::emuLoop, this, path, &result);
-    const bool ok = future.get();
-    if (!ok) {
+    const int status = future.get();
+    if (status != 0) {
         mThread.join();
     }
-    return ok;
+    return status;
 }
 
 void EmulatorEngine::unloadRom() {
@@ -455,6 +456,13 @@ bool EmulatorEngine::driveToKernelIdle() {
 }
 
 void EmulatorEngine::applyCoreSettings() {
+    // Service::Init calls lle_modules.at(name) for every service module and
+    // aborts on a missing key. Upstream frontends seed the map from their
+    // config file, which this engine doesn't have — all-HLE, like libretro's.
+    for (const auto& service_module : Service::service_module_map) {
+        Settings::values.lle_modules.emplace(service_module.name, false);
+    }
+
     Settings::values.graphics_api = Settings::GraphicsAPI::OpenGL;
     Settings::values.layout_option = Settings::LayoutOption::CustomLayout;
     Settings::values.use_cpu_jit = true;
@@ -472,7 +480,7 @@ void EmulatorEngine::applyCoreSettings() {
     profile.motion_device = "engine:motion_emu,update_period:100,sensitivity:0.01";
 }
 
-void EmulatorEngine::emuLoop(std::string romPath, std::promise<bool>* loadResult) {
+void EmulatorEngine::emuLoop(std::string romPath, std::promise<int>* loadResult) {
     auto& system = Core::System::GetInstance();
 
     auto finishThread = [this] {
@@ -492,7 +500,7 @@ void EmulatorEngine::emuLoop(std::string romPath, std::promise<bool>* loadResult
                                              [&] { return mSurface != nullptr || mStop; });
         if (!got || mStop || !mSurface) {
             ENGINE_LOGE("loadRom: no surface");
-            loadResult->set_value(false);
+            loadResult->set_value(kLoadNoSurface);
             finishThread();
             return;
         }
@@ -529,9 +537,17 @@ void EmulatorEngine::emuLoop(std::string romPath, std::promise<bool>* loadResult
     InputManager::Init();
 
     mWindow->MakeCurrent();
-    const auto loadStatus = system.Load(*mWindow, corePath);
-    if (loadStatus != Core::System::ResultStatus::Success) {
-        ENGINE_LOGE("System::Load failed: %d", static_cast<int>(loadStatus));
+    // A throw out of the core here would unwind off the thread and abort the
+    // whole app; turn it into a load failure the module can report instead.
+    int loadStatus = 0;
+    try {
+        loadStatus = static_cast<int>(system.Load(*mWindow, corePath));
+    } catch (const std::exception& e) {
+        ENGINE_LOGE("System::Load threw: %s", e.what());
+        loadStatus = kLoadException;
+    }
+    if (loadStatus != 0) {
+        ENGINE_LOGE("System::Load failed: %d", loadStatus);
         mWindow->DoneCurrent();
         InputManager::Shutdown();
         {
@@ -539,7 +555,7 @@ void EmulatorEngine::emuLoop(std::string romPath, std::promise<bool>* loadResult
             std::scoped_lock slk(mSurfaceMutex);
             mWindow.reset();
         }
-        loadResult->set_value(false);
+        loadResult->set_value(static_cast<int>(loadStatus));
         finishThread();
         return;
     }
@@ -552,7 +568,7 @@ void EmulatorEngine::emuLoop(std::string romPath, std::promise<bool>* loadResult
                 static_cast<unsigned long long>(programId));
     // Contract: paused at frame 0 — the caller resolves now, frames start on
     // the first resume.
-    loadResult->set_value(true);
+    loadResult->set_value(0);
 
     while (true) {
         {
